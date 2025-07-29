@@ -40,37 +40,33 @@ export default function SquareCard ({
 
   return (
     <div>
-      <div style={styles.squareBasicInfo}>
-        <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{square.square}</div>
+      <div className="flex items-center">
+        <div className="text-lg font-bold">{square.square}</div>
         {square.piece && (
-          <div style={{
-            fontSize: '24px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
+          <div className="text-2xl flex items-center gap-2">
             <span>{getPieceIcon(square.piece.type, square.piece.color)}</span>
             <span>{getColorCircle(square.piece.color)}</span>
           </div>
         )}
         {square.piece && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div onClick={onToggleMobility} style={{ ...styles.btn, backgroundColor: 'blue' }}>
+          <div className="flex items-center gap-2">
+            <div
+              onClick={onToggleMobility}
+              className="px-2 py-1 rounded-lg bg-blue-500 text-white text-xs cursor-pointer ml-2"
+            >
               {squarePreferences.showMobility ? 'Hide mobility' : 'Show mobility'}
             </div>
           </div>
         )}
-
       </div>
 
-      <div style={styles.attackContainer}>
+      <div className="flex items-center justify-between mt-2">
         <div>{square.piece ? 'attacks' : 'Black control'}: {square.attackers.length}</div>
         {square.attackers.length > 0 && (
           <div
-            style={{
-              ...styles.btn,
-              backgroundColor: arrowPreferences.showAttackers ? '#f44336' : '#2196f3'
-            }}
+            className={`px-2 py-1 rounded-lg text-white text-xs cursor-pointer ml-2 ${
+              arrowPreferences.showAttackers ? 'bg-red-500' : 'bg-blue-500'
+            }`}
             onClick={onToggleAttackers}
           >
             {arrowPreferences.showAttackers ? 'Hide' : 'Show'}
@@ -78,52 +74,31 @@ export default function SquareCard ({
         )}
       </div>
 
-      <div style={styles.attackContainer}>
+      <div className="flex items-center justify-between mt-2">
         <div>{square.piece ? 'defends' : 'White control'}: {square.defenders.length}</div>
         {square.defenders.length > 0 && (
           <div
-            style={{
-              ...styles.btn,
-              backgroundColor: arrowPreferences.showDefenders ? '#4caf50' : '#2196f3'
-            }}
+            className={`px-2 py-1 rounded-lg text-white text-xs cursor-pointer ml-2 ${
+              arrowPreferences.showDefenders ? 'bg-green-500' : 'bg-blue-500'
+            }`}
             onClick={onToggleDefenders}
           >
             {arrowPreferences.showDefenders ? 'Hide' : 'Show'}
           </div>
         )}
       </div>
+
       {square.pawnStructure.isPawn && (
         <div>
-          {square.pawnStructure.isolated && <div style={{textAlign: 'left'}}>Isolated Pawn</div>}
-          {square.pawnStructure.doubled && <div style={{textAlign: 'left'}}>Doubled Pawn</div>}
-          {square.pawnStructure.passed && <div style={{textAlign: 'left'}}>Passed Pawn</div>}
-          {square.pawnStructure.backward && <div style={{textAlign: 'left'}}>Backward pawn</div>}
-          {square.pawnStructure.hanging && <div style={{textAlign: 'left'}}>Hanging Pawn</div>}
-          {square.pawnStructure.blocked.isBlocked && <div style={{textAlign: 'left'}}>Blocked Pawn</div>}
-          {square.pawnStructure.blocked.permanentlyBlocked && <div style={{textAlign: 'left'}}>Locked Pawn</div>}
+          {square.pawnStructure.isolated && <div className="text-left">Isolated Pawn</div>}
+          {square.pawnStructure.doubled && <div className="text-left">Doubled Pawn</div>}
+          {square.pawnStructure.passed && <div className="text-left">Passed Pawn</div>}
+          {square.pawnStructure.backward && <div className="text-left">Backward pawn</div>}
+          {square.pawnStructure.hanging && <div className="text-left">Hanging Pawn</div>}
+          {square.pawnStructure.blocked.isBlocked && <div className="text-left">Blocked Pawn</div>}
+          {square.pawnStructure.blocked.permanentlyBlocked && <div className="text-left">Locked Pawn</div>}
         </div>
       )}
     </div>
   )
-}
-
-const styles = {
-  squareBasicInfo: {
-    display: 'flex',
-    alignItems: 'center'
-  },
-  attackContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: '8px'
-  },
-  btn: {
-    padding: '4px 8px',
-    borderRadius: '8px',
-    color: 'white',
-    fontSize: '12px',
-    cursor: 'pointer',
-    marginLeft: '8px'
-  }
 }

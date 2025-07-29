@@ -1,4 +1,13 @@
-import type { BishopEvaluation, EnrichedSquare, KnightEvaluation, TeamStructure } from '../engine/types.ts'
+import type {
+  BishopEvaluation,
+  EnrichedSquare,
+  KnightEvaluation,
+  TeamStructure,
+  RookEvaluation,
+  QueenEvaluation,
+  KingEvaluation,
+  PawnEvaluation
+} from '../engine/types.ts'
 
 interface TeamDisplayProps {
   team: TeamStructure;
@@ -6,165 +15,177 @@ interface TeamDisplayProps {
 }
 
 export default function TeamDisplay({ team, color }: TeamDisplayProps) {
-  // Styles de base
-  const containerStyle: React.CSSProperties = {
-    padding: '16px',
-    borderRadius: '8px',
-    border: '2px solid',
-    width: '500px',
-    backgroundColor: color === 'white' ? '#f3f4f6' : '#1f2937',
-    borderColor: color === 'white' ? '#d1d5db' : '#4b5563',
-    color: color === 'white' ? '#000000' : '#ffffff'
+  const blockClass = `p-2 rounded border text-xs ${
+    color === 'white' ? 'bg-white border-gray-200' : 'bg-gray-700 border-gray-600'
+  }`;
+
+  // Fonction pour obtenir la couleur basée sur le grade
+  const getGradeColor = (grade: string, isTotal: boolean = false) => {
+    const colors = {
+      A: isTotal ? 'bg-green-500' : 'bg-green-400',
+      B: isTotal ? 'bg-lime-500' : 'bg-lime-400',
+      C: isTotal ? 'bg-yellow-500' : 'bg-yellow-400',
+      D: isTotal ? 'bg-orange-500' : 'bg-orange-400',
+      F: isTotal ? 'bg-red-500' : 'bg-red-400'
+    };
+    return colors[grade as keyof typeof colors] || (isTotal ? 'bg-gray-500' : 'bg-gray-400');
   };
 
-  const headerStyle: React.CSSProperties = {
-    textAlign: 'center',
-    marginBottom: '16px'
+  // Fonction pour calculer le grade d'un critère individuel
+  const getCriteriaGrade = (value: number, maxValue: number = 3.0): string => {
+    const percentage = (value / maxValue) * 100;
+    if (percentage >= 85) return 'A';
+    if (percentage >= 70) return 'B';
+    if (percentage >= 50) return 'C';
+    if (percentage >= 30) return 'D';
+    return 'F';
   };
 
-  const titleStyle: React.CSSProperties = {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    textTransform: 'uppercase'
+  // Composant Progress Bar
+  const ProgressBar = ({ value, maxValue = 3.0, isTotal = false, grade }: {
+    value: number;
+    maxValue?: number;
+    isTotal?: boolean;
+    grade?: string;
+  }) => {
+    const percentage = Math.min(100, (value / maxValue) * 100);
+    const displayGrade = grade || getCriteriaGrade(value, maxValue);
+    const colorClass = getGradeColor(displayGrade, isTotal);
+
+    return (
+      <div className="w-8 h-8 relative bg-gray-200 rounded border overflow-hidden">
+        <div
+          className={`h-full ${colorClass} transition-all duration-300`}
+          style={{ width: `${percentage}%` }}
+        />
+        <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-800">
+          {value.toFixed(1)}
+        </div>
+      </div>
+    );
   };
 
-  const blocksContainerStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px'
-  };
+  const PieceRow = ({ piece, type }: { piece: EnrichedSquare; type: 'n' | 'b' | 'r' | 'q' | 'k' | 'p' }) => {
+    const evaluation = piece.evaluation;
+    if (!evaluation || piece.piece?.type !== type) return null;
 
-  const blockStyle: React.CSSProperties = {
-    padding: '12px',
-    borderRadius: '6px',
-    border: '1px solid #e5e7eb',
-    backgroundColor: color === 'white' ? '#ffffff' : '#374151'
-  };
-
-  const blockTitleStyle: React.CSSProperties = {
-    fontSize: '14px',
-    fontWeight: '600',
-    marginBottom: '8px'
-  };
-
-  const statRowStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '14px'
-  };
-
-  const statValueStyle: React.CSSProperties = {
-    fontWeight: '500'
-  };
-
-  const pieceValueStyle: React.CSSProperties = {
-    fontSize: '18px',
-    fontWeight: 'bold'
-  };
-
-  const pawnStructureItemStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '12px',
-    marginBottom: '4px'
-  };
-
-  const noStructureStyle: React.CSSProperties = {
-    fontSize: '12px',
-    color: '#6b7280',
-    fontStyle: 'italic'
-  };
-
-  const PieceBlock = ({ title, piece, defaultValue = 0 }: { title: string; piece: EnrichedSquare | null; defaultValue?: number }) => (
-    <div style={blockStyle}>
-      <div style={blockTitleStyle}>{title}</div>
-      <div style={pieceValueStyle}>{piece ? piece.mobility.totalMobility : defaultValue}</div>
-    </div>
-  );
-
-  const IndexedPieceBlock = ({ title, pieces, index }: { title: string; pieces: EnrichedSquare[]; index: number }) => (
-    <div style={blockStyle}>
-      <div style={blockTitleStyle}>{title}</div>
-      {pieces.length > 0 && pieces[0].piece!.type === 'n' && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '50px' }}>square</div>
-            <div style={{ width: '60px' }}>mobility</div>
-            <div style={{ width: '55px' }}>position</div>
-            <div style={{ width: '65px' }}>outposts</div>
-            <div style={{ width: '55px' }}>support</div>
-            <div style={{ width: '45px' }}>safety</div>
-            <div style={{ width: '50px' }}>total</div>
-            <div style={{ width: '50px' }}>grade</div>
+    switch (type) {
+      case 'k':
+        const kingEval = evaluation as KingEvaluation;
+        return (
+          <div className="flex items-center gap-1">
+            <div className="w-8 text-xs font-medium">{piece.square}</div>
+            <ProgressBar value={kingEval.mobility} />
+            <ProgressBar value={kingEval.position} />
+            <ProgressBar value={kingEval.activity} />
+            <ProgressBar value={kingEval.castling} />
+            <ProgressBar value={kingEval.support} />
+            <ProgressBar value={kingEval.safety} />
+            <ProgressBar value={kingEval.totalScore} maxValue={10} isTotal={true} grade={kingEval.grade} />
           </div>
-          {pieces.map(piece => {
-            if (piece.piece?.type !== 'n') return null
-            const evaluation = piece.evaluation as KnightEvaluation | undefined
-            if (!evaluation) return null
-            return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '50px' }}>{piece.square}</div>
-                <div style={{ width: '60px' }}>{evaluation.mobility}</div>
-                <div style={{ width: '55px' }}>{evaluation.position}</div>
-                <div style={{ width: '65px' }}>{evaluation.outposts}</div>
-                <div style={{ width: '55px' }}>{evaluation.support}</div>
-                <div style={{ width: '45px' }}>{evaluation.safety}</div>
-                <div style={{ width: '50px' }}>{evaluation.totalScore}</div>
-                <div>{evaluation.grade}</div>
-              </div>
-            )
-          })}
-        </div>
-
-      )}
-      {pieces.length > 0 && pieces[0].piece!.type === 'b' && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '50px' }}>square</div>
-            <div style={{ width: '60px' }}>mobility</div>
-            <div style={{ width: '55px' }}>position</div>
-            <div style={{ width: '65px' }}>diagonals</div>
-            <div style={{ width: '55px' }}>support</div>
-            <div style={{ width: '45px' }}>safety</div>
-            <div style={{ width: '50px' }}>total</div>
-            <div style={{ width: '50px' }}>grade</div>
+        );
+      case 'q':
+        const queenEval = evaluation as QueenEvaluation;
+        return (
+          <div className="flex items-center gap-1">
+            <div className="w-8 text-xs font-medium">{piece.square}</div>
+            <ProgressBar value={queenEval.mobility} />
+            <ProgressBar value={queenEval.position} />
+            <ProgressBar value={queenEval.centralization} />
+            <ProgressBar value={queenEval.tactics} />
+            <ProgressBar value={queenEval.support} />
+            <ProgressBar value={queenEval.safety} />
+            <ProgressBar value={queenEval.totalScore} maxValue={10} isTotal={true} grade={queenEval.grade} />
           </div>
-          {pieces.map(piece => {
-            if (piece.piece?.type !== 'b') return null
-            const evaluation = piece.evaluation as BishopEvaluation | undefined
-            if (!evaluation) return null
-            return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '50px' }}>{piece.square}</div>
-                <div style={{ width: '60px' }}>{evaluation.mobility}</div>
-                <div style={{ width: '55px' }}>{evaluation.position}</div>
-                <div style={{ width: '65px' }}>{evaluation.diagonals}</div>
-                <div style={{ width: '55px' }}>{evaluation.support}</div>
-                <div style={{ width: '45px' }}>{evaluation.safety}</div>
-                <div style={{ width: '50px' }}>{evaluation.totalScore}</div>
-                <div>{evaluation.grade}</div>
-              </div>
-            )
-          })}
-        </div>
+        );
+      case 'r':
+        const rookEval = evaluation as RookEvaluation;
+        return (
+          <div className="flex items-center gap-1">
+            <div className="w-8 text-xs font-medium">{piece.square}</div>
+            <ProgressBar value={rookEval.mobility} />
+            <ProgressBar value={rookEval.position} />
+            <ProgressBar value={rookEval.openFiles} />
+            <ProgressBar value={rookEval.tactics} />
+            <ProgressBar value={rookEval.support} />
+            <ProgressBar value={rookEval.safety} />
+            <ProgressBar value={rookEval.totalScore} maxValue={10} isTotal={true} grade={rookEval.grade} />
+          </div>
+        );
+      case 'b':
+        const bishopEval = evaluation as BishopEvaluation;
+        return (
+          <div className="flex items-center gap-1">
+            <div className="w-8 text-xs font-medium">{piece.square}</div>
+            <ProgressBar value={bishopEval.mobility} />
+            <ProgressBar value={bishopEval.position} />
+            <ProgressBar value={bishopEval.diagonals} />
+            <ProgressBar value={bishopEval.tactics} />
+            <ProgressBar value={bishopEval.support} />
+            <ProgressBar value={bishopEval.safety} />
+            <ProgressBar value={bishopEval.totalScore} maxValue={10} isTotal={true} grade={bishopEval.grade} />
+          </div>
+        );
+      case 'n':
+        const knightEval = evaluation as KnightEvaluation;
+        return (
+          <div className="flex items-center gap-1">
+            <div className="w-8 text-xs font-medium">{piece.square}</div>
+            <ProgressBar value={knightEval.mobility} />
+            <ProgressBar value={knightEval.position} />
+            <ProgressBar value={knightEval.tactics} />
+            <ProgressBar value={knightEval.support} />
+            <ProgressBar value={knightEval.safety} />
+            <ProgressBar value={knightEval.totalScore} maxValue={10} isTotal={true} grade={knightEval.grade} />
+          </div>
+        );
+      case 'p':
+        const pawnEval = evaluation as PawnEvaluation;
+        return (
+          <div className="flex items-center gap-1">
+            <div className="w-8 text-xs font-medium">{piece.square}</div>
+            <ProgressBar value={pawnEval.mobility} />
+            <ProgressBar value={pawnEval.position} />
+            <ProgressBar value={pawnEval.structure} />
+            <ProgressBar value={pawnEval.advancement} />
+            <ProgressBar value={pawnEval.support} />
+            <ProgressBar value={pawnEval.safety} />
+            <ProgressBar value={pawnEval.totalScore} maxValue={10} isTotal={true} grade={pawnEval.grade} />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
+  const PieceBlock = ({ title, pieces, type, headers }: {
+    title: string;
+    pieces: EnrichedSquare[];
+    type: 'n' | 'b' | 'r' | 'q' | 'k' | 'p';
+    headers: string[];
+  }) => (
+    <div className={blockClass}>
+      <div className="font-semibold mb-1">{title}</div>
+      {pieces.length > 0 ? (
+        <>
+          <div className="flex items-center gap-1 text-xs font-medium text-gray-500 mb-1">
+            {headers.map((header, idx) => (
+              <div key={idx} className="w-8 text-center">
+                {header}
+              </div>
+            ))}
+          </div>
+          {pieces.map((piece, idx) => (
+            <PieceRow key={idx} piece={piece} type={type} />
+          ))}
+        </>
+      ) : (
+        <div className="text-gray-500 italic">None</div>
       )}
     </div>
   );
 
-  const StatBlock = ({ title, stats }: { title: string; stats: Array<{ label: string; value: number }> }) => (
-    <div style={blockStyle}>
-      <div style={blockTitleStyle}>{title}</div>
-      {stats.map((stat, index) => (
-        <div key={index} style={statRowStyle}>
-          <span>{stat.label}:</span>
-          <span style={statValueStyle}>{stat.value}</span>
-        </div>
-      ))}
-    </div>
-  );
-
-  const PawnStructureBlock = () => {
+  const StructureBlock = () => {
     const structures = [
       { label: 'Isolated', count: team.pawnStructure.isolated.length },
       { label: 'Doubled', count: team.pawnStructure.doubled.length },
@@ -175,72 +196,101 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
     ].filter(structure => structure.count > 0);
 
     return (
-      <div style={blockStyle}>
-        <div style={blockTitleStyle}>
-          Pawn Structure ({team.pawns.length})
-        </div>
+      <div className={blockClass}>
+        <div className="font-semibold mb-1">Pawn Structure ({team.pawns.length})</div>
         {structures.length > 0 ? (
-          structures.map((structure, index) => (
-            <div key={index} style={pawnStructureItemStyle}>
-              <span>{structure.label}:</span>
-              <span style={statValueStyle}>{structure.count}</span>
-            </div>
-          ))
+          <div className="flex flex-wrap gap-2">
+            {structures.map((structure, index) => (
+              <span key={index} className="text-xs">
+                {structure.label}: {structure.count}
+              </span>
+            ))}
+          </div>
         ) : (
-          <div style={noStructureStyle}>No special structures</div>
+          <div className="text-xs text-gray-500 italic">Clean structure</div>
         )}
       </div>
     );
   };
 
   return (
-    <div style={containerStyle}>
-      {/* Couleur de l'équipe */}
-      <div style={headerStyle}>
-        <div style={titleStyle}>{color} Team - {team.phase.name} {team.phase.value.toFixed(2)}</div>
+    <div className={`p-3 rounded-lg border-2 w-[520px] ${
+      color === 'white'
+        ? 'bg-gray-50 border-gray-300 text-black'
+        : 'bg-gray-800 border-gray-600 text-white'
+    }`}>
+      {/* Header */}
+      <div className="text-center mb-2">
+        <div className="text-sm font-bold uppercase">
+          {color} - {team.phase.name} ({team.phase.value.toFixed(2)})
+        </div>
       </div>
 
-      <div style={blocksContainerStyle}>
-        {/* Bloc Mobility */}
-        <StatBlock
-          title="Mobility"
-          stats={[
-            { label: 'Total', value: team.totalMobility },
-            { label: 'Average', value: Math.round(team.averageMobility * 10) / 10 }
-          ]}
-        />
-
-        {/* Bloc Material */}
-        <StatBlock
-          title="Material"
-          stats={[
-            { label: 'Total Value', value: team.material.totalValue },
-            { label: 'Piece Count', value: team.material.pieceCount },
-            { label: 'Major Pieces', value: team.material.majorPieces },
-            { label: 'Minor Pieces', value: team.material.minorPieces }
-          ]}
-        />
+      <div className="flex flex-col gap-2">
+        {/* Mobility & Material - Une seule ligne chacun */}
+        <div className={blockClass}>
+          <div className="font-semibold mb-1">Mobility & Material</div>
+          <div className="flex justify-between text-xs">
+            <span>Total: {team.totalMobility} | Avg: {team.averageMobility.toFixed(1)}</span>
+            <span>Value: {team.material.totalValue} | Pieces: {team.material.pieceCount}</span>
+          </div>
+        </div>
 
         {/* King */}
-        {/*<PieceBlock title="King" piece={team.king} defaultValue={0} />*/}
+        {team.king && (
+          <PieceBlock
+            title="♔ King"
+            pieces={[team.king]}
+            type="k"
+            headers={['Sq', 'Mob', 'Pos', 'Act', 'Cast', 'Sup', 'Saf', 'Tot']}
+          />
+        )}
 
-        {/*/!* Queen *!/*/}
-        {/*<PieceBlock title="Queen" piece={team.queen} defaultValue={0} />*/}
+        {/* Queen */}
+        {team.queen && (
+          <PieceBlock
+            title="♕ Queen"
+            pieces={[team.queen]}
+            type="q"
+            headers={['Sq', 'Mob', 'Pos', 'Cen', 'Tac', 'Sup', 'Saf', 'Tot']}
+          />
+        )}
 
-        {/*/!* Rooks *!/*/}
-        {/*<IndexedPieceBlock title="Rook 1" pieces={team.rooks} index={0} />*/}
-        {/*<IndexedPieceBlock title="Rook 2" pieces={team.rooks} index={1} />*/}
+        {/* Rooks */}
+        <PieceBlock
+          title="♖ Rooks"
+          pieces={team.rooks}
+          type="r"
+          headers={['Sq', 'Mob', 'Pos', 'Open', 'Tac', 'Sup', 'Saf', 'Tot']}
+        />
 
         {/* Bishops */}
-        <IndexedPieceBlock title="Bishop 1" pieces={team.bishops} index={0} />
+        <PieceBlock
+          title="♗ Bishops"
+          pieces={team.bishops}
+          type="b"
+          headers={['Sq', 'Mob', 'Pos', 'Diag', 'Tac', 'Sup', 'Saf', 'Tot']}
+        />
 
         {/* Knights */}
-        <IndexedPieceBlock title="Knight 1" pieces={team.knights} index={0} />
+        <PieceBlock
+          title="♘ Knights"
+          pieces={team.knights}
+          type="n"
+          headers={['Sq', 'Mob', 'Pos', 'Tac', 'Sup', 'Saf', 'Tot']}
+        />
+
+        {/* Pawns */}
+        <PieceBlock
+          title="♙ Pawns"
+          pieces={team.pawns}
+          type="p"
+          headers={['Sq', 'Mob', 'Pos', 'Str', 'Adv', 'Sup', 'Saf', 'Tot']}
+        />
 
         {/* Pawn Structure */}
-        <PawnStructureBlock />
+        <StructureBlock />
       </div>
     </div>
   );
-};
-
+}

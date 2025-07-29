@@ -7,7 +7,6 @@ import SquareCard from './components/squareCard.tsx'
 import TeamDisplay from './components/teamDisplay.tsx'
 import { type AnalysisData, chessAnalyzer } from './engine/chess-analyzer'
 
-
 interface LastMove {
   from: string;
   to: string;
@@ -17,7 +16,6 @@ type ExtendedArrow = Arrow & {
   id?: string;
 }
 
-// 🎯 NOUVEAU : State global pour les préférences d'affichage
 export type ArrowPreferences = {
   showAttackers: boolean;
   showDefenders: boolean;
@@ -30,7 +28,6 @@ type SquareStyle = Partial<Record<Square, {
   backgroundColor: string;
   type: 'MOBILITY' | 'LAST_MOVE';
 }>>;
-
 
 export default function App () {
   const chessGameRef = useRef(new Chess('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'))
@@ -56,7 +53,6 @@ export default function App () {
     analyzeCurrentPosition(chessGame.fen())
   }, [])
 
-  // 🎯 NOUVEAU : Effet pour mettre à jour les flèches quand la case change
   useEffect(() => {
     if (indexesSquare && analysisData) {
       updateArrowsForCurrentSquare()
@@ -111,7 +107,6 @@ export default function App () {
 
     const newArrows: ExtendedArrow[] = []
 
-    // Ajouter les flèches d'attaque si activées
     if (arrowPreferences.showAttackers && square.attackers.length > 0) {
       const attackArrows = square.attackers.map((attacker, index) => ({
         startSquare: attacker,
@@ -122,7 +117,6 @@ export default function App () {
       newArrows.push(...attackArrows)
     }
 
-    // Ajouter les flèches de défense si activées
     if (arrowPreferences.showDefenders && square.defenders.length > 0) {
       const defendArrows = square.defenders.map((defender, index) => ({
         startSquare: defender,
@@ -175,7 +169,6 @@ export default function App () {
     const indexFile = files.indexOf(square[0])
     const indexRank = 8 - parseInt(square[1])
     setIndexesSquare({ file: indexFile, rank: indexRank })
-    // 🎯 Ne plus vider les flèches ici - elles seront mises à jour automatiquement
   }
 
   function onPieceDrop ({ sourceSquare, targetSquare }: PieceDropHandlerArgs): boolean {
@@ -222,19 +215,17 @@ export default function App () {
     arrows
   }
 
-
-  console.log(analysisData?.whiteTeam)
   return (
-    <div style={styles.body}>
-      <div style={{ padding: 20 }}>
-        <div style={styles.container}>
+    <div className="flex flex-row">
+      <div className="p-5">
+        <div className="w-[600px] mx-auto">
           <Chessboard options={chessboardOptions}/>
         </div>
       </div>
 
-      <div style={styles.sidePanel}>
+      <div className="p-5 flex gap-1">
         {indexesSquare ? (
-          <div style={styles.helloPanel}>
+          <div className="w-fit h-40 bg-blue-50 p-2.5 mb-5 rounded-lg border-2 border-blue-500 text-blue-800 font-bold text-center">
             <SquareCard
               key={indexesSquare?.file + '-' + indexesSquare?.rank}
               square={analysisData?.board[indexesSquare.rank][indexesSquare.file]}
@@ -246,7 +237,7 @@ export default function App () {
             />
           </div>
         ) : (
-          <div style={styles.helloPanel}>
+          <div className="w-fit h-40 bg-blue-50 p-2.5 mb-5 rounded-lg border-2 border-blue-500 text-blue-800 font-bold text-center">
             Cliquez sur une case
           </div>
         )}
@@ -256,35 +247,6 @@ export default function App () {
     </div>
   )
 }
-
-const styles = {
-  body: {
-    display: 'flex',
-    flexDirection: 'row' as const
-  },
-  container: {
-    width: '600px',
-    margin: '0 auto'
-  },
-  sidePanel: {
-    padding: '20px',
-    display: 'flex',
-    gap: "4px"
-  },
-  helloPanel: {
-    width: 'fit-content',
-    height: '160px',
-    backgroundColor: '#e3f2fd',
-    padding: '10px',
-    marginBottom: '20px',
-    borderRadius: '8px',
-    border: '2px solid #2196f3',
-    color: '#1976d2',
-    fontWeight: 'bold',
-    textAlign: 'center' as const
-  }
-}
-
 
 function getOnlyCSSSquare(obj: SquareStyle): Record<string, React.CSSProperties> {
   const result: Record<string, React.CSSProperties> = {};

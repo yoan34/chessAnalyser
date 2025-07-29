@@ -19,6 +19,15 @@ type PieceMovementConfig = {
   specialLogic?: (board: EnrichedBoard, square: Square, color: Color, mobility: Mobility) => void;
 }
 
+export const MAX_MOBILITY = {
+  'pawn': 3,
+  'knight': 8,
+  'bishop': 13,
+  'rook': 14,
+  'queen': 27,
+  'king': 8
+}
+
 export const PIECE_MOVEMENTS: Record<string, PieceMovementConfig> = {
   knight: {
     patterns: [

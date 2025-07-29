@@ -1,4 +1,5 @@
 import type { EnrichedSquare } from '../types.ts'
+import { normalizePieceEvaluation, STANDARD_CRITERION_MAX } from './normalization.ts'
 
 type PieceWeights = {
   [key: string]: number;
@@ -34,20 +35,20 @@ export function getWeightsByPhase<T extends PieceWeights> (openingWeights: T, mi
   }
 }
 
-export function supportScore (square: EnrichedSquare, maxScore: number = 1.5, scorePerDefender: number = 0.3): number {
-  return Math.min(maxScore, square.defenders.length * scorePerDefender)
+export function supportScore (square: EnrichedSquare, scorePerDefender: number = 0.5): number {
+  return Math.min(STANDARD_CRITERION_MAX.support, square.defenders.length * scorePerDefender)
 }
 
-export function safetyScore (square: EnrichedSquare, maxScore: number = 0.5, penaltyPerAttacker: number = 0.1): number {
+export function safetyScore (square: EnrichedSquare, penaltyPerAttacker: number = 0.1): number {
   const attackerCount = square.attackers.length
   return attackerCount === 0
-    ? maxScore
-    : Math.max(0, maxScore - (attackerCount * penaltyPerAttacker))
+    ? STANDARD_CRITERION_MAX.safety
+    : Math.max(0, STANDARD_CRITERION_MAX.safety - (attackerCount * penaltyPerAttacker))
 }
 
-export function mobilityScore (square: EnrichedSquare, maxMobility: number, maxScore: number = 3.0): number {
+export function mobilityScore (square: EnrichedSquare, maxMobility: number): number {
   const currentMobility = square.mobility.totalMobility
-  return Math.min(maxScore, (currentMobility / maxMobility) * maxScore)
+  return Math.min(STANDARD_CRITERION_MAX.mobility, (currentMobility / maxMobility) * STANDARD_CRITERION_MAX.mobility)
 }
 
 export function gradeFromScore (score: number): { normalizedScore: number; grade: string } {
@@ -63,32 +64,27 @@ export function gradeFromScore (score: number): { normalizedScore: number; grade
   return { normalizedScore, grade }
 }
 
-export function pieceScore<K extends readonly string[]> (
-  raw: Record<K[number], number>,
+export function calculateNormalizedPieceScore<K extends readonly string[]> (
+  rawScores: Record<K[number], number>,
   weights: Record<K[number], number>,
-  keys: K
+  pieceType: string
 ): {
   scores: { [P in K[number]]: number };
   totalScore: number;
   grade: string;
 } {
-  const scores = {} as { [P in K[number]]: number }
-  let total = 0
+  // Utilise la nouvelle fonction de normalisation
+  const evaluation = normalizePieceEvaluation(rawScores, weights, pieceType);
 
-  for (const key of keys) {
-    const rawValue = raw[key as K[number]] ?? 0
-    const weightValue = weights[key as K[number]] ?? 0
-    const score = rawValue * weightValue
-
-    scores[key as K[number]] = Math.round(score * 10) / 10
-    total += score
+  // Formatte les scores individuels pour l'affichage
+  const scores = {} as { [P in K[number]]: number };
+  for (const key in evaluation.weightedScores) {
+    scores[key as K[number]] = Math.round(evaluation.weightedScores[key] * 10) / 10;
   }
-
-  const { normalizedScore, grade } = gradeFromScore(total)
 
   return {
     scores,
-    totalScore: Math.round(normalizedScore * 10) / 10,
-    grade
-  }
+    totalScore: evaluation.totalScore,
+    grade: evaluation.grade
+  };
 }

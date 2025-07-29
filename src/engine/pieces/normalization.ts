@@ -3,6 +3,8 @@
 // 🎯 NORMALISATION AVEC CRITÈRES DIFFÉRENTS PAR PIÈCE
 
 // 📊 SCORES MAX STANDARDISÉS PAR CRITÈRE
+import type { BishopMetrics, KingMetrics, KnightMetrics, PawnMetrics, QueenMetrics, RookMetrics } from '../types.ts'
+
 export const STANDARD_CRITERION_MAX = {
   // Critères communs
   mobility: 2.5,
@@ -28,45 +30,52 @@ interface PieceCriteriaConfig {
   targetNormalizedMax: number;  // Cible après normalisation (10)
 }
 
+const PAWN_CRITERIA_KEYS: readonly (keyof PawnMetrics)[] = ["mobility", "position", "tactics", "support", "safety", "structure", "advancement"];
+const KNIGHT_CRITERIA_KEYS: readonly (keyof KnightMetrics)[] = ["mobility", "position", "tactics", "support", "safety"];
+const BISHOP_CRITERIA_KEYS: readonly (keyof BishopMetrics)[] = ['mobility', 'position', 'diagonals', 'tactics', 'support', 'safety'];
+const ROOK_CRITERIA_KEYS: readonly (keyof RookMetrics)[] = ['mobility', 'position', 'openFiles', 'tactics', 'support', 'safety'];
+const QUEEN_CRITERIA_KEYS: readonly (keyof QueenMetrics)[] = ['mobility', 'position', 'centralization', 'tactics', 'support', 'safety'];
+const KING_CRITERIA_KEYS: readonly (keyof KingMetrics)[] = ["mobility", "position", "activity", "castling", "support", "safety"];
+
 export const PIECE_CONFIGS: Record<string, PieceCriteriaConfig> = {
   // ♟️ PION - 7 critères (avec tactics)
   pawn: {
-    criteria: ['mobility', 'position', 'tactics', 'structure', 'advancement', 'support', 'safety'],
+    criteria: [...PAWN_CRITERIA_KEYS],
     maxPossibleRaw: 2.5 + 2.5 + 2.5 + 2.5 + 2.5 + 1.5 + 0.5, // = 14.0
     targetNormalizedMax: 10
   },
 
   // ♞ CAVALIER - 5 critères
   knight: {
-    criteria: ['mobility', 'position', 'tactics', 'support', 'safety'],
+    criteria: [...KNIGHT_CRITERIA_KEYS],
     maxPossibleRaw: 2.5 + 2.5 + 2.5 + 1.5 + 0.5, // = 9.5
     targetNormalizedMax: 10
   },
 
   // ♗ FOU - 6 critères
   bishop: {
-    criteria: ['mobility', 'position', 'diagonals', 'tactics', 'support', 'safety'],
+    criteria: [...BISHOP_CRITERIA_KEYS],
     maxPossibleRaw: 2.5 + 2.5 + 2.5 + 2.5 + 1.5 + 0.5, // = 11.5
     targetNormalizedMax: 10
   },
 
   // ♜ TOUR - 6 critères
   rook: {
-    criteria: ['mobility', 'position', 'openFiles', 'tactics', 'support', 'safety'],
+    criteria: [...ROOK_CRITERIA_KEYS],
     maxPossibleRaw: 2.5 + 2.5 + 2.5 + 2.5 + 1.5 + 0.5, // = 11.5
     targetNormalizedMax: 10
   },
 
   // ♛ DAME - 6 critères
   queen: {
-    criteria: ['mobility', 'position', 'centralization', 'tactics', 'support', 'safety'],
+    criteria: [...QUEEN_CRITERIA_KEYS],
     maxPossibleRaw: 2.5 + 2.5 + 2.5 + 2.5 + 1.5 + 0.5, // = 11.5
     targetNormalizedMax: 10
   },
 
   // ♚ ROI - 6 critères (pas de tactics)
   king: {
-    criteria: ['mobility', 'position', 'activity', 'castling', 'support', 'safety'],
+    criteria: [...KING_CRITERIA_KEYS],
     maxPossibleRaw: 2.5 + 2.5 + 2.5 + 2.5 + 1.5 + 0.5, // = 11.5
     targetNormalizedMax: 10
   }
@@ -121,51 +130,4 @@ function getGrade(score: number): string {
   if (score >= 5.0) return 'C';
   if (score >= 3.0) return 'D';
   return 'F';
-}
-
-// 🧮 FONCTIONS DE CALCUL DES CRITÈRES SPÉCIFIQUES
-
-// 🎯 FONCTIONS SPÉCIFIQUES À IMPLÉMENTER
-
-export function calculatePawnStructure(board: any, square: string, color: string): number {
-  // TODO: Implémenter l'analyse de structure des pions
-  // Pour l'instant, retourne une valeur basique
-  return 1.5; // Placeholder sur 2.5
-}
-
-export function calculatePawnAdvancement(board: any, square: string, color: string): number {
-  // TODO: Implémenter l'analyse d'avancement des pions
-  // Pour l'instant, retourne une valeur basique
-  return 1.0; // Placeholder sur 2.5
-}
-
-export function calculateKnightTactics(board: any, square: string, color: string): number {
-  // TODO: Implémenter l'analyse tactique du cavalier (outposts, etc.)
-  return 1.5; // Placeholder sur 2.5
-}
-
-export function calculateBishopDiagonals(board: any, square: string, color: string): number {
-  // Utilise la fonction existante diagonalsScore mais normalise
-  // diagonalsScore retourne 0-2.5, donc déjà normalisé
-  return 1.8; // Placeholder - utilisera la fonction existante
-}
-
-export function calculateRookOpenFiles(board: any, square: string, color: string): number {
-  // TODO: Implémenter l'analyse des colonnes ouvertes
-  return 1.2; // Placeholder sur 2.5
-}
-
-export function calculateQueenCentralization(board: any, square: string, color: string): number {
-  // TODO: Implémenter l'analyse de centralisation de la dame
-  return 1.8; // Placeholder sur 2.5
-}
-
-export function calculateKingActivity(board: any, square: string, color: string, phase: any): number {
-  // TODO: Implémenter l'analyse d'activité du roi (important en finale)
-  return phase.name === 'Endgame' ? 2.0 : 0.5; // Plus actif en finale
-}
-
-export function calculateCastlingScore(board: any, square: string, color: string): number {
-  // TODO: Implémenter l'analyse des droits de roque et sécurité
-  return 1.5; // Placeholder sur 2.5
 }

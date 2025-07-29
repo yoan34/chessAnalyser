@@ -1,11 +1,15 @@
 import type { Color, Square } from 'chess.js'
-import { calculateMobility, PIECE_MOVEMENTS } from '../mobility.ts'
+import { calculateMobility, MAX_MOBILITY, PIECE_MOVEMENTS } from '../mobility.ts'
 import { positionScore } from '../psqt.ts'
 import type { BishopEvaluation, BishopMetrics, BishopWeights, EnrichedBoard, Mobility, PhaseGame } from '../types.ts'
 import { isValidSquare, squareToIndices } from '../utils.ts'
-import { getWeightsByPhase, mobilityScore, pieceScore, safetyScore, supportScore } from './utils.ts'
-
-const BISHOP_CRITERIA_KEYS: readonly (keyof BishopMetrics)[] = ['mobility', 'position', 'diagonals', 'tactics', 'support', 'safety']
+import {
+  calculateNormalizedPieceScore,
+  getWeightsByPhase,
+  mobilityScore,
+  safetyScore,
+  supportScore
+} from './utils.ts'
 
 const BISHOP_OPENING_WEIGHTS: BishopWeights = {
   mobility: 0.8,
@@ -34,8 +38,8 @@ const BISHOP_ENDGAME_WEIGHTS: BishopWeights = {
   safety: 0.8
 }
 
-export function getBishopMobility(board: EnrichedBoard, square: Square, color: Color): Mobility {
-  return calculateMobility(board, square, color, PIECE_MOVEMENTS.bishop);
+export function getBishopMobility (board: EnrichedBoard, square: Square, color: Color): Mobility {
+  return calculateMobility(board, square, color, PIECE_MOVEMENTS.bishop)
 }
 
 export function evaluateBishop (board: EnrichedBoard, square: Square, color: Color, phase: PhaseGame): BishopEvaluation {
@@ -49,19 +53,26 @@ export function evaluateBishop (board: EnrichedBoard, square: Square, color: Col
     phase.value
   )
 
-  // ES CE QUE DIAGONALS NE DEVRAIT PAS FUSIONNER AVEC MOBILITY OU POSITION
+  // 🎯 SCORES BRUTS NORMALISÉS
   const metrics: BishopMetrics = {
-    mobility: mobilityScore(bishopSquare, 13),
+    mobility: mobilityScore(bishopSquare, MAX_MOBILITY.bishop),
     position: positionScore('b', rank, file, color, phase.name),
     diagonals: diagonalsScore(board, square, color),
+    tactics: 1,
     support: supportScore(bishopSquare),
-    safety: safetyScore(bishopSquare),
-    tactics: 1 // NEED IMPLEMENTATION
+    safety: safetyScore(bishopSquare)
   }
 
-  const { scores, totalScore, grade } = pieceScore(metrics, weights, BISHOP_CRITERIA_KEYS)
+  // 🎯 NORMALISATION - utilise la fonction générique
+  const { scores, totalScore, grade } = calculateNormalizedPieceScore(metrics, weights, 'bishop')
+
   return {
-    ...scores,
+    mobility: scores.mobility,
+    position: scores.position,
+    tactics: scores.tactics,
+    diagonals: scores.diagonals,
+    support: scores.support,
+    safety: scores.safety,
     totalScore,
     grade
   }

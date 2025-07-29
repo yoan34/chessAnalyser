@@ -1,11 +1,15 @@
 import type { Color, Square } from 'chess.js'
-import { calculateMobility, PIECE_MOVEMENTS } from '../mobility.ts'
+import { calculateMobility, MAX_MOBILITY, PIECE_MOVEMENTS } from '../mobility.ts'
 import { positionScore } from '../psqt.ts'
 import type { EnrichedBoard, Mobility, PhaseGame, QueenEvaluation, QueenMetrics, QueenWeights } from '../types.ts'
 import { squareToIndices } from '../utils.ts'
-import { getWeightsByPhase, mobilityScore, pieceScore, safetyScore, supportScore } from './utils.ts'
-
-const QUEEN_CRITERIA_KEYS: readonly (keyof QueenMetrics)[] = ['mobility', 'position', 'centralization', 'tactics', 'support', 'safety']
+import {
+  calculateNormalizedPieceScore,
+  getWeightsByPhase,
+  mobilityScore,
+  safetyScore,
+  supportScore
+} from './utils.ts'
 
 const QUEEN_OPENING_WEIGHTS: QueenWeights = {
   mobility: 0.5,          // FAIBLE : développement prématuré dangereux
@@ -34,8 +38,8 @@ const QUEEN_ENDGAME_WEIGHTS: QueenWeights = {
   safety: 0.8             // Modéré : moins de menaces directes
 }
 
-export function getQueenMobility(board: EnrichedBoard, square: Square, color: Color): Mobility {
-  return calculateMobility(board, square, color, PIECE_MOVEMENTS.queen);
+export function getQueenMobility (board: EnrichedBoard, square: Square, color: Color): Mobility {
+  return calculateMobility(board, square, color, PIECE_MOVEMENTS.queen)
 }
 
 export function evaluateQueen (board: EnrichedBoard, square: Square, color: Color, phase: PhaseGame): QueenEvaluation {
@@ -50,7 +54,7 @@ export function evaluateQueen (board: EnrichedBoard, square: Square, color: Colo
   )
 
   const metrics: QueenMetrics = {
-    mobility: mobilityScore(queenSquare, 27),
+    mobility: mobilityScore(queenSquare, MAX_MOBILITY.queen),
     position: positionScore('q', rank, file, color, phase.name),
     support: supportScore(queenSquare),
     safety: safetyScore(queenSquare),
@@ -58,9 +62,15 @@ export function evaluateQueen (board: EnrichedBoard, square: Square, color: Colo
     centralization: 1 // A IMPLEMENTER
   }
 
-  const { scores, totalScore, grade } = pieceScore(metrics, weights, QUEEN_CRITERIA_KEYS)
+  const { scores, totalScore, grade } = calculateNormalizedPieceScore(metrics, weights, 'knight')
+
   return {
-    ...scores,
+    mobility: scores.mobility,
+    position: scores.position,
+    tactics: scores.tactics,
+    centralization: scores.centralization,
+    support: scores.support,
+    safety: scores.safety,
     totalScore,
     grade
   }

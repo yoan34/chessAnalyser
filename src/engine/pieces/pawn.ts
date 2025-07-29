@@ -1,7 +1,7 @@
 
 
 import type { Color, Square } from 'chess.js'
-import { calculateMobility, PIECE_MOVEMENTS } from '../mobility.ts'
+import { calculateMobility, MAX_MOBILITY, PIECE_MOVEMENTS } from '../mobility.ts'
 import { positionScore } from '../psqt.ts'
 import type {
   EnrichedBoard,
@@ -13,9 +13,7 @@ import type {
   PhaseGame
 } from '../types.ts'
 import { indicesToSquare, isValidSquare, squareToIndices } from '../utils.ts'
-import { getWeightsByPhase, mobilityScore, pieceScore, safetyScore, supportScore } from './utils.ts'
-
-const PAWN_CRITERIA_KEYS: readonly (keyof PawnMetrics)[] = ["mobility", "position", "tactics", "support", "safety", "structure", "advancement"];
+import { getWeightsByPhase, mobilityScore, calculateNormalizedPieceScore, safetyScore, supportScore } from './utils.ts'
 
 const PAWN_OPENING_WEIGHTS: PawnWeights = {
   mobility: 0.8,          // Modéré : développement et contrôle
@@ -74,7 +72,7 @@ export function evaluatePawn(board: EnrichedBoard, square: Square, color: Color,
   );
 
   const metrics: PawnMetrics = {
-    mobility: mobilityScore(pawnSquare, 3),
+    mobility: mobilityScore(pawnSquare, MAX_MOBILITY.pawn),
     position: positionScore('n', rank, file, color, phase.name),
     support: supportScore(pawnSquare),
     safety: safetyScore(pawnSquare),
@@ -83,11 +81,18 @@ export function evaluatePawn(board: EnrichedBoard, square: Square, color: Color,
     advancement: 1
   }
 
-  const { scores, totalScore, grade } = pieceScore(metrics, weights, PAWN_CRITERIA_KEYS);
+  const { scores, totalScore, grade } = calculateNormalizedPieceScore(metrics, weights, 'pawn');
+
   return {
-    ...scores,
+    mobility: scores.mobility,
+    position: scores.position,
+    tactics: scores.tactics,
+    structure: scores.structure,
+    advancement: scores.advancement,
+    support: scores.support,
+    safety: scores.safety,
     totalScore,
-    grade,
+    grade
   };
 }
 

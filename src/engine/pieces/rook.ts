@@ -1,11 +1,15 @@
 import type { Color, Square } from 'chess.js'
-import { calculateMobility, PIECE_MOVEMENTS } from '../mobility.ts'
+import { calculateMobility, MAX_MOBILITY, PIECE_MOVEMENTS } from '../mobility.ts'
 import { positionScore } from '../psqt.ts'
 import type { EnrichedBoard, Mobility, PhaseGame, RookEvaluation, RookMetrics, RookWeights } from '../types.ts'
 import { squareToIndices } from '../utils.ts'
-import { getWeightsByPhase, mobilityScore, pieceScore, safetyScore, supportScore } from './utils.ts'
-
-const ROOK_CRITERIA_KEYS: readonly (keyof RookMetrics)[] = ['mobility', 'position', 'openFiles', 'tactics', 'support', 'safety'] as const;
+import {
+  calculateNormalizedPieceScore,
+  getWeightsByPhase,
+  mobilityScore,
+  safetyScore,
+  supportScore
+} from './utils.ts'
 
 const ROOK_OPENING_WEIGHTS: RookWeights = {
   mobility: 0.6,        // Faible : développement lent, pièces bloquent
@@ -14,7 +18,7 @@ const ROOK_OPENING_WEIGHTS: RookWeights = {
   tactics: 0.7,         // Modéré : moins d'opportunités early game
   support: 1.3,         // Important : protection du roque
   safety: 1.5           // CRITIQUE : tours vulnérables si mal développées
-};
+}
 
 const ROOK_MIDDLEGAME_WEIGHTS: RookWeights = {
   mobility: 1.4,        // Important : flexibilité pour attaques/défense
@@ -23,7 +27,7 @@ const ROOK_MIDDLEGAME_WEIGHTS: RookWeights = {
   tactics: 1.4,         // IMPORTANT : clouages, enfilades fréquents
   support: 1.0,         // Standard : équilibre attaque/défense
   safety: 0.8          // Prise de risques calculés
-};
+}
 
 const ROOK_ENDGAME_WEIGHTS: RookWeights = {
   mobility: 1.8,        // MAXIMUM : roi actif, contrôle de l'espace
@@ -32,25 +36,25 @@ const ROOK_ENDGAME_WEIGHTS: RookWeights = {
   tactics: 1.1,         // Modéré : moins de cibles tactiques
   support: 0.4,         // Faible : peu de pièces à soutenir
   safety: 0.6          // Modéré : moins de menaces complexes
-};
-
-export function getRookMobility(board: EnrichedBoard, square: Square, color: Color): Mobility {
-  return calculateMobility(board, square, color, PIECE_MOVEMENTS.rook);
 }
 
-export function evaluateRook(board: EnrichedBoard, square: Square, color: Color, phase: PhaseGame): RookEvaluation {
-  const { rank, file } = squareToIndices(square);
-  const rookSquare = board[rank][file];
+export function getRookMobility (board: EnrichedBoard, square: Square, color: Color): Mobility {
+  return calculateMobility(board, square, color, PIECE_MOVEMENTS.rook)
+}
+
+export function evaluateRook (board: EnrichedBoard, square: Square, color: Color, phase: PhaseGame): RookEvaluation {
+  const { rank, file } = squareToIndices(square)
+  const rookSquare = board[rank][file]
 
   const weights = getWeightsByPhase(
     ROOK_OPENING_WEIGHTS,
     ROOK_MIDDLEGAME_WEIGHTS,
     ROOK_ENDGAME_WEIGHTS,
     phase.value
-  );
+  )
 
   const metrics: RookMetrics = {
-    mobility: mobilityScore(rookSquare, 14),
+    mobility: mobilityScore(rookSquare, MAX_MOBILITY.rook),
     position: positionScore('r', rank, file, color, phase.name),
     support: supportScore(rookSquare),
     safety: safetyScore(rookSquare),
@@ -58,10 +62,16 @@ export function evaluateRook(board: EnrichedBoard, square: Square, color: Color,
     openFiles: 1// A IMPLEMENTER
   }
 
-  const { scores, totalScore, grade } = pieceScore(metrics, weights, ROOK_CRITERIA_KEYS);
+  const { scores, totalScore, grade } = calculateNormalizedPieceScore(metrics, weights, 'rook')
+
   return {
-    ...scores,
+    mobility: scores.mobility,
+    position: scores.position,
+    tactics: scores.tactics,
+    openFiles: scores.openFiles,
+    support: scores.support,
+    safety: scores.safety,
     totalScore,
-    grade,
-  };
+    grade
+  }
 }

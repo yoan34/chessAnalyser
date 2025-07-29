@@ -205,7 +205,7 @@ export function positionScore(
   color: Color,
   phaseName: PhaseName
 ): number {
-  const adjustedRank = color === 'w' ? 7 - rank : rank;
+  const adjustedRank = color === 'b' ? 7 - rank : rank;
   const isOpening = phaseName === 'Opening';
 
   // Sélectionner la table appropriée

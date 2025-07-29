@@ -32,7 +32,7 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
   };
 
   // Fonction pour calculer le grade d'un critère individuel
-  const getCriteriaGrade = (value: number, maxValue: number = 3.0): string => {
+  const getCriteriaGrade = (value: number, maxValue: number = 2.5): string => {
     const percentage = (value / maxValue) * 100;
     if (percentage >= 85) return 'A';
     if (percentage >= 70) return 'B';
@@ -42,24 +42,26 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
   };
 
   // Composant Progress Bar
-  const ProgressBar = ({ value, maxValue = 3.0, isTotal = false, grade }: {
-    value: number;
+  const ProgressBar = ({ value, maxValue = 2.5, isTotal = false, grade }: {
+    value: number | undefined;
     maxValue?: number;
     isTotal?: boolean;
     grade?: string;
   }) => {
-    const percentage = Math.min(100, (value / maxValue) * 100);
-    const displayGrade = grade || getCriteriaGrade(value, maxValue);
+    // 🔧 Protection contre les valeurs undefined
+    const safeValue = value || 0;
+    const percentage = Math.min(100, (safeValue / maxValue) * 100);
+    const displayGrade = grade || getCriteriaGrade(safeValue, maxValue);
     const colorClass = getGradeColor(displayGrade, isTotal);
 
     return (
-      <div className="w-8 h-8 relative bg-gray-200 rounded border overflow-hidden">
+      <div className="w-12 h-4 relative bg-gray-200 rounded border overflow-hidden">
         <div
           className={`h-full ${colorClass} transition-all duration-300`}
           style={{ width: `${percentage}%` }}
         />
         <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-800">
-          {value.toFixed(1)}
+          {safeValue.toFixed(1)}
         </div>
       </div>
     );
@@ -70,10 +72,10 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
     if (!evaluation || piece.piece?.type !== type) return null;
 
     switch (type) {
-      case 'k':
+      case 'k': {
         const kingEval = evaluation as KingEvaluation;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div className="w-8 text-xs font-medium">{piece.square}</div>
             <ProgressBar value={kingEval.mobility} />
             <ProgressBar value={kingEval.position} />
@@ -84,10 +86,11 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
             <ProgressBar value={kingEval.totalScore} maxValue={10} isTotal={true} grade={kingEval.grade} />
           </div>
         );
-      case 'q':
+      }
+      case 'q': {
         const queenEval = evaluation as QueenEvaluation;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div className="w-8 text-xs font-medium">{piece.square}</div>
             <ProgressBar value={queenEval.mobility} />
             <ProgressBar value={queenEval.position} />
@@ -98,10 +101,11 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
             <ProgressBar value={queenEval.totalScore} maxValue={10} isTotal={true} grade={queenEval.grade} />
           </div>
         );
-      case 'r':
+      }
+      case 'r': {
         const rookEval = evaluation as RookEvaluation;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div className="w-8 text-xs font-medium">{piece.square}</div>
             <ProgressBar value={rookEval.mobility} />
             <ProgressBar value={rookEval.position} />
@@ -112,10 +116,11 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
             <ProgressBar value={rookEval.totalScore} maxValue={10} isTotal={true} grade={rookEval.grade} />
           </div>
         );
-      case 'b':
+      }
+      case 'b': {
         const bishopEval = evaluation as BishopEvaluation;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div className="w-8 text-xs font-medium">{piece.square}</div>
             <ProgressBar value={bishopEval.mobility} />
             <ProgressBar value={bishopEval.position} />
@@ -126,10 +131,11 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
             <ProgressBar value={bishopEval.totalScore} maxValue={10} isTotal={true} grade={bishopEval.grade} />
           </div>
         );
-      case 'n':
+      }
+      case 'n': {
         const knightEval = evaluation as KnightEvaluation;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div className="w-8 text-xs font-medium">{piece.square}</div>
             <ProgressBar value={knightEval.mobility} />
             <ProgressBar value={knightEval.position} />
@@ -139,10 +145,11 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
             <ProgressBar value={knightEval.totalScore} maxValue={10} isTotal={true} grade={knightEval.grade} />
           </div>
         );
-      case 'p':
+      }
+      case 'p': {
         const pawnEval = evaluation as PawnEvaluation;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div className="w-8 text-xs font-medium">{piece.square}</div>
             <ProgressBar value={pawnEval.mobility} />
             <ProgressBar value={pawnEval.position} />
@@ -153,6 +160,7 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
             <ProgressBar value={pawnEval.totalScore} maxValue={10} isTotal={true} grade={pawnEval.grade} />
           </div>
         );
+      }
       default:
         return null;
     }
@@ -168,9 +176,9 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
       <div className="font-semibold mb-1">{title}</div>
       {pieces.length > 0 ? (
         <>
-          <div className="flex items-center gap-1 text-xs font-medium text-gray-500 mb-1">
+          <div className="flex items-center gap-2 text-xs font-medium text-gray-500 mb-1">
             {headers.map((header, idx) => (
-              <div key={idx} className="w-8 text-center">
+              <div key={idx} className={idx === 0 ? "w-8 text-center" : "w-12 text-center"}>
                 {header}
               </div>
             ))}
@@ -214,7 +222,7 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
   };
 
   return (
-    <div className={`p-3 rounded-lg border-2 w-[520px] ${
+    <div className={`p-3 rounded-lg border-2 w-[600px] ${
       color === 'white'
         ? 'bg-gray-50 border-gray-300 text-black'
         : 'bg-gray-800 border-gray-600 text-white'

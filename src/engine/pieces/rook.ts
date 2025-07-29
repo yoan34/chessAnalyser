@@ -1,8 +1,11 @@
 import type { Color, Square } from 'chess.js'
+import { calculateMobility, PIECE_MOVEMENTS } from '../mobility.ts'
 import { positionScore } from '../psqt.ts'
-import type { EnrichedBoard, KnightEvaluation, Mobility, PhaseGame, RookWeights } from '../types.ts'
-import { indicesToSquare, isValidSquare, squareToIndices } from '../utils.ts'
-import { getWeightsByPhase, gradeFromScore, mobilityScore, safetyScore, supportScore } from './utils.ts'
+import type { EnrichedBoard, Mobility, PhaseGame, RookEvaluation, RookMetrics, RookWeights } from '../types.ts'
+import { squareToIndices } from '../utils.ts'
+import { getWeightsByPhase, mobilityScore, pieceScore, safetyScore, supportScore } from './utils.ts'
+
+const ROOK_CRITERIA_KEYS: readonly (keyof RookMetrics)[] = ['mobility', 'position', 'openFiles', 'tactics', 'support', 'safety'] as const;
 
 const ROOK_OPENING_WEIGHTS: RookWeights = {
   mobility: 0.6,        // Faible : développement lent, pièces bloquent
@@ -32,73 +35,10 @@ const ROOK_ENDGAME_WEIGHTS: RookWeights = {
 };
 
 export function getRookMobility(board: EnrichedBoard, square: Square, color: Color): Mobility {
-  const mobility: Mobility = {
-    moves: [],
-    captures: [],
-    checks: [],
-    totalMobility: 0,
-  }
-
-  const { rank, file } = squareToIndices(square);
-
-  // 🎯 Directions horizontales et verticales : [rankOffset, fileOffset]
-  const rookDirections = [
-    [-1, 0], // Haut
-    [1, 0],  // Bas
-    [0, -1], // Gauche
-    [0, 1]   // Droite
-  ];
-
-  // 🎯 Pour chaque direction
-  for (const [rankDir, fileDir] of rookDirections) {
-    let currentRank = rank + rankDir;
-    let currentFile = file + fileDir;
-
-    // 🎯 Continue jusqu'à atteindre une pièce ou le bord de l'échiquier
-    while (isValidSquare(currentRank, currentFile)) {
-      const targetSquare = board[currentRank][currentFile];
-      const targetSquareNotation = indicesToSquare(currentRank, currentFile);
-
-      // 🎯 Case vide : mouvement possible
-      if (!targetSquare.piece) {
-        mobility.moves.push(targetSquareNotation);
-      }
-      // 🎯 Pièce ennemie : capture possible
-      else if (targetSquare.piece.color !== color) {
-        if (targetSquare.piece.type === 'k') {
-          mobility.checks.push(targetSquareNotation);
-        } else {
-          mobility.captures.push(targetSquareNotation);
-        }
-        break; // Arrêter dans cette direction après capture
-      }
-      // 🎯 Pièce alliée : bloquer le chemin
-      else {
-        break; // Arrêter dans cette direction
-      }
-
-      // 🎯 Continuer dans la même direction
-      currentRank += rankDir;
-      currentFile += fileDir;
-    }
-  }
-
-  // 🎯 Mettre à jour la mobilité totale
-  mobility.totalMobility = mobility.moves.length + mobility.captures.length + mobility.checks.length;
-
-  // 🎯 Sauvegarder dans le board
-  board[rank][file].mobility.moves = mobility.moves;
-  board[rank][file].mobility.captures = mobility.captures;
-  board[rank][file].mobility.checks = mobility.checks;
-  board[rank][file].mobility.totalMobility = mobility.totalMobility;
-
-  console.log('ROOK ', square, 'mobility:', mobility.totalMobility);
-  console.log(mobility);
-
-  return mobility;
+  return calculateMobility(board, square, color, PIECE_MOVEMENTS.rook);
 }
 
-export function evaluateRook(board: EnrichedBoard, square: Square, color: Color, phase: PhaseGame): KnightEvaluation {
+export function evaluateRook(board: EnrichedBoard, square: Square, color: Color, phase: PhaseGame): RookEvaluation {
   const { rank, file } = squareToIndices(square);
   const rookSquare = board[rank][file];
 
@@ -109,30 +49,19 @@ export function evaluateRook(board: EnrichedBoard, square: Square, color: Color,
     phase.value
   );
 
-  const mobilityRaw = mobilityScore(rookSquare, 14)
-  const positionRaw = positionScore('n', rank, file, color, phase.name)
-  const supportRaw = supportScore(rookSquare)
-  const safetyRaw = safetyScore(rookSquare)
-  const tacticRaw = 1 // A IMPLEMENTER
+  const metrics: RookMetrics = {
+    mobility: mobilityScore(rookSquare, 14),
+    position: positionScore('r', rank, file, color, phase.name),
+    support: supportScore(rookSquare),
+    safety: safetyScore(rookSquare),
+    tactics: 1,// A IMPLEMENTER
+    openFiles: 1// A IMPLEMENTER
+  }
 
-
-  const mobility = mobilityRaw * weights.mobility;
-  const position = positionRaw * weights.position;
-  const tactics = tacticRaw * weights.tactics;
-  const support = supportRaw * weights.support;
-  const safety = safetyRaw * weights.safety;
-
-  // 📊 CALCUL FINAL
-  const totalScore = mobility + position + tactics + support + safety;
-  const { normalizedScore, grade } = gradeFromScore(totalScore)
-
+  const { scores, totalScore, grade } = pieceScore(metrics, weights, ROOK_CRITERIA_KEYS);
   return {
-    mobility: Math.round(mobility * 10) / 10,
-    position: Math.round(position * 10) / 10,
-    tactics: Math.round(tactics * 10) / 10,
-    support: Math.round(support * 10) / 10,
-    safety: Math.round(safety * 10) / 10,
-    totalScore: Math.round(normalizedScore * 10) / 10,
+    ...scores,
+    totalScore,
     grade,
   };
 }

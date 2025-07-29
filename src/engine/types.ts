@@ -11,7 +11,7 @@ export type EnrichedSquare = {
     type: PieceSymbol;
     color: Color;
   } | undefined;
-  evaluation: KnightEvaluation | BishopEvaluation | undefined
+  evaluation: PawnEvaluation | KnightEvaluation | BishopEvaluation | RookEvaluation | QueenEvaluation | KingEvaluation | undefined
 
   // ===== INFORMATIONS POSITION =====
   square: Square;        // 'e4', 'a1', etc.
@@ -137,55 +137,52 @@ export type TeamStructure = {
   averageMobility: number
 }
 
-// KNIGHT
-export type KnightEvaluation = {
-  mobility: number;        // 0-10
-  position: number;        // 0-10
-  tactics: number;        // 0-10
-  support: number;         // 0-10
-  safety: number;          // 0-10
-  totalScore: number;      // 0-10
-  grade: string;           // A, B, C, D, F
-}
+///////////////////////////////
+/////////// PIECES ////////////
+///////////////////////////////
 
-export type KnightWeights = {
+export type PieceCommonMetrics = {
   mobility: number;
   position: number;
   tactics: number;
   support: number;
   safety: number;
-}
-
-
-// BISHOP
-export type BishopWeights = {
-  mobility: number;
-  position: number;
-  diagonals: number;
-  tactics: number;
-  support: number;
-  safety: number;
-}
-
-export type BishopEvaluation = {
-  mobility: number;
-  position: number;
-  diagonals: number;
-  support: number;
-  safety: number;
+};
+export type PieceScore = {
   totalScore: number;
   grade: string;
 }
+/////////// PAWN ////////////
+export type PawnMetrics = PieceCommonMetrics & { structure: number; advancement: number; };
+export type PawnWeights = PawnMetrics
+export type PawnEvaluation = PawnWeights & PieceScore
 
-export type RookWeights = {
-  mobility: number;
-  position: number;
-  openFiles: number;    // Colonnes ouvertes et semi-ouvertes
-  tactics: number;      // Clouages, enfilades, rayons X
-  support: number;
-  safety: number;
-}
+/////////// KNIGHT ////////////
+export type KnightMetrics = PieceCommonMetrics
+export type KnightWeights = KnightMetrics
+export type KnightEvaluation = KnightMetrics & PieceScore
 
+/////////// BISHOP ///////////
+
+export type BishopMetrics = PieceCommonMetrics & { diagonals: number; }
+export type BishopWeights = BishopMetrics
+export type BishopEvaluation = BishopWeights & PieceScore
+
+/////////// ROOKS ////////////
+export type RookMetrics = PieceCommonMetrics & { openFiles: number; }
+export type RookWeights = RookMetrics
+export type RookEvaluation = RookWeights & PieceScore
+
+
+/////////// QUEEN ////////////
+export type QueenMetrics = PieceCommonMetrics & { centralization: number; }
+export type QueenWeights = QueenMetrics
+export type QueenEvaluation = QueenWeights & PieceScore
+
+/////////// KING ////////////
+export type KingMetrics = Omit<PieceCommonMetrics, 'tactics'> & { activity: number; castling: number; };
+export type KingWeights = KingMetrics
+export type KingEvaluation = KingWeights & PieceScore
 
 
 export type PhaseName = 'Opening' | 'Middlegame' | 'Endgame'

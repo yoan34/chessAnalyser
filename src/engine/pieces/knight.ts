@@ -1,8 +1,11 @@
 import type { Color, Square } from 'chess.js'
+import { calculateMobility, PIECE_MOVEMENTS } from '../mobility.ts'
 import { positionScore } from '../psqt.ts'
-import type { EnrichedBoard, KnightEvaluation, KnightWeights, Mobility, PhaseGame } from '../types.ts'
-import { indicesToSquare, isValidSquare, squareToIndices } from '../utils.ts'
-import { getWeightsByPhase, gradeFromScore, mobilityScore, safetyScore, supportScore } from './utils.ts'
+import type { EnrichedBoard, KnightEvaluation, KnightMetrics, KnightWeights, Mobility, PhaseGame } from '../types.ts'
+import { isValidSquare, squareToIndices } from '../utils.ts'
+import { getWeightsByPhase, mobilityScore, pieceScore, safetyScore, supportScore } from './utils.ts'
+
+const KNIGHT_CRITERIA_KEYS: readonly (keyof KnightMetrics)[] = ["mobility", "position", "tactics", "support", "safety"] as const;
 
 const KNIGHT_OPENING_WEIGHTS: KnightWeights = {
   mobility: 0.8,
@@ -29,67 +32,7 @@ const KNIGHT_ENDGAME_WEIGHTS: KnightWeights = {
 };
 
 export function getKnightMobility(board: EnrichedBoard, square: Square, color: Color): Mobility {
-  const mobility: Mobility = {
-    moves: [],
-    captures: [],
-    checks: [],
-    totalMobility: 0,
-  }
-
-  const { rank, file } = squareToIndices(square);
-
-  // 🎯 Les 8 mouvements possibles du cavalier : [rankOffset, fileOffset]
-  const knightMoves = [
-    [-2, -1], // 2 haut, 1 gauche
-    [-2, 1],  // 2 haut, 1 droite
-    [-1, -2], // 1 haut, 2 gauche
-    [-1, 2],  // 1 haut, 2 droite
-    [1, -2],  // 1 bas, 2 gauche
-    [1, 2],   // 1 bas, 2 droite
-    [2, -1],  // 2 bas, 1 gauche
-    [2, 1]    // 2 bas, 1 droite
-  ];
-
-  // 🎯 Vérifier chaque mouvement possible
-  for (const [rankOffset, fileOffset] of knightMoves) {
-    const targetRank = rank + rankOffset;
-    const targetFile = file + fileOffset;
-
-    // 🎯 Vérifier si la case cible est valide
-    if (isValidSquare(targetRank, targetFile)) {
-      const targetSquare = board[targetRank][targetFile];
-      const targetSquareNotation = indicesToSquare(targetRank, targetFile);
-
-      // 🎯 Case vide : mouvement possible
-      if (!targetSquare.piece) {
-        mobility.moves.push(targetSquareNotation);
-      }
-      // 🎯 Pièce ennemie : capture possible
-      else if (targetSquare.piece.color !== color) {
-        if (targetSquare.piece.type === 'k') {
-          mobility.checks.push(targetSquareNotation);
-        } else {
-          mobility.captures.push(targetSquareNotation);
-        }
-      }
-      // 🎯 Pièce alliée : pas de mouvement possible (case occupée)
-      // On ne fait rien, le cavalier ne peut pas aller sur cette case
-    }
-  }
-
-  // 🎯 Mettre à jour la mobilité totale
-  mobility.totalMobility = mobility.moves.length + mobility.captures.length + mobility.checks.length;
-
-  // 🎯 Sauvegarder dans le board
-  board[rank][file].mobility.moves = mobility.moves;
-  board[rank][file].mobility.captures = mobility.captures;
-  board[rank][file].mobility.checks = mobility.checks;
-  board[rank][file].mobility.totalMobility = mobility.totalMobility;
-
-  console.log('KNIGHT ', square, 'mobility:', mobility.totalMobility);
-  console.log(mobility);
-
-  return mobility;
+  return calculateMobility(board, square, color, PIECE_MOVEMENTS.knight);
 }
 
 export function evaluateKnight(board: EnrichedBoard, square: Square, color: Color, phase: PhaseGame): KnightEvaluation {
@@ -103,30 +46,18 @@ export function evaluateKnight(board: EnrichedBoard, square: Square, color: Colo
     phase.value
   );
 
-  const mobilityRaw = mobilityScore(knightSquare, 8)
-  const positionRaw = positionScore('n', rank, file, color, phase.name)
-  const supportRaw = supportScore(knightSquare)
-  const safetyRaw = safetyScore(knightSquare)
-  const tacticRaw = tacticScore(board, square, color, rank)
+  const metrics: KnightMetrics = {
+    mobility: mobilityScore(knightSquare, 8),
+    position: positionScore('n', rank, file, color, phase.name),
+    support: supportScore(knightSquare),
+    safety: safetyScore(knightSquare),
+    tactics: tacticScore(board, square, color, rank) // NEEoD GENERIQUE
+  }
 
-
-  const mobility = mobilityRaw * weights.mobility;
-  const position = positionRaw * weights.position;
-  const tactics = tacticRaw * weights.tactics;
-  const support = supportRaw * weights.support;
-  const safety = safetyRaw * weights.safety;
-
-  // 📊 CALCUL FINAL
-  const totalScore = mobility + position + tactics + support + safety;
-  const { normalizedScore, grade } = gradeFromScore(totalScore)
-
+  const { scores, totalScore, grade } = pieceScore(metrics, weights, KNIGHT_CRITERIA_KEYS);
   return {
-    mobility: Math.round(mobility * 10) / 10,
-    position: Math.round(position * 10) / 10,
-    tactics: Math.round(tactics * 10) / 10,
-    support: Math.round(support * 10) / 10,
-    safety: Math.round(safety * 10) / 10,
-    totalScore: Math.round(normalizedScore * 10) / 10,
+    ...scores,
+    totalScore,
     grade,
   };
 }

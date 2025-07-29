@@ -1,61 +1,56 @@
 
 
 import type { Color, Square } from 'chess.js'
-import type { EnrichedBoard, Mobility, PawnBlocked } from '../types.ts'
-
-// 🎯 Exemple d'usage dans ta fonction pion
+import { calculateMobility, PIECE_MOVEMENTS } from '../mobility.ts'
+import { positionScore } from '../psqt.ts'
+import type {
+  EnrichedBoard,
+  Mobility,
+  PawnBlocked,
+  PawnEvaluation,
+  PawnMetrics,
+  PawnWeights,
+  PhaseGame
+} from '../types.ts'
 import { indicesToSquare, isValidSquare, squareToIndices } from '../utils.ts'
+import { getWeightsByPhase, mobilityScore, pieceScore, safetyScore, supportScore } from './utils.ts'
+
+const PAWN_CRITERIA_KEYS: readonly (keyof PawnMetrics)[] = ["mobility", "position", "tactics", "support", "safety", "structure", "advancement"];
+
+const PAWN_OPENING_WEIGHTS: PawnWeights = {
+  mobility: 0.8,          // Modéré : développement et contrôle
+  position: 1.5,          // IMPORTANT : contrôle du centre vital
+  tactics: 0.5, // A MODIFIER
+  structure: 1.3,         // Important : chaînes, pas de faiblesses
+  advancement: 0.4,       // Faible : promotion lointaine
+  support: 1.2,           // Important : soutien des pièces
+  safety: 1.0             // Standard : éviter les pertes
+};
+
+const PAWN_MIDDLEGAME_WEIGHTS: PawnWeights = {
+  mobility: 1.0,          // Standard : flexibilité tactique
+  position: 1.2,          // Important : contrôle de l'espace
+  tactics: 0.5, // A MODIFIER
+  structure: 1.4,         // IMPORTANT : structure = stratégie
+  advancement: 0.8,       // Modéré : pions passés émergents
+  support: 1.1,           // Important : coordination avec pièces
+  safety: 0.9             // Modéré : sacrifices parfois justifiés
+};
+
+const PAWN_ENDGAME_WEIGHTS: PawnWeights = {
+  mobility: 1.2,          // Important : liberté de mouvement
+  position: 0.8,          // Modéré : avancement > position
+  tactics: 0.5, // A MODIFIER
+  structure: 1.1,         // Important mais moins critique
+  advancement: 2.0,       // MAXIMUM : promotion = victoire !
+  support: 0.6,           // Faible : moins de pièces disponibles
+  safety: 0.7             // Modéré : risques calculés pour promouvoir
+};
 
 export function getPawnMobility(board: EnrichedBoard, square: Square, color: Color): Mobility {
-  const mobility: Mobility = {
-    moves: [],
-    captures: [],
-    checks: [],
-    totalMobility: 0,
-  }
+  const mobility = calculateMobility(board, square, color, PIECE_MOVEMENTS.pawn);
 
   const { rank, file } = squareToIndices(square);
-  const direction = color === 'w' ? -1 : 1;
-  const startRank = color === 'w' ? 6 : 1;
-
-
-  // 🎯 Mouvement d'une case
-  const oneSquareRank = rank + direction;
-  if (isValidSquare(oneSquareRank, file) && !board[oneSquareRank][file].piece) {
-    mobility.moves.push(indicesToSquare(oneSquareRank, file));
-
-    // 🎯 Mouvement de deux cases (premier coup)
-    if (rank === startRank) {
-      const twoSquareRank = rank + (2 * direction);
-      if (isValidSquare(twoSquareRank, file) && !board[twoSquareRank][file].piece) {
-        mobility.moves.push(indicesToSquare(twoSquareRank, file));
-      }
-    }
-  }
-
-  // 🎯 Captures diagonales
-  for (const fileOffset of [-1, 1]) {
-    const captureRank = rank + direction;
-    const captureFile = file + fileOffset;
-
-    if (isValidSquare(captureRank, captureFile)) {
-      const targetSquare = board[captureRank][captureFile];
-      if (targetSquare.piece && targetSquare.piece.color !== color) {
-        if (targetSquare.piece.type === 'k') {
-          mobility.checks.push(indicesToSquare(captureRank, captureFile));
-        } else {
-          mobility.captures.push(indicesToSquare(captureRank, captureFile));
-        }
-
-      }
-    }
-  }
-
-  board[rank][file].mobility.moves = mobility.moves
-  board[rank][file].mobility.captures = mobility.captures
-  board[rank][file].mobility.checks = mobility.checks
-  board[rank][file].mobility.totalMobility = mobility.moves.length + mobility.captures.length + + mobility.checks.length
-
   board[rank][file].pawnStructure.isPawn = true;
   board[rank][file].pawnStructure.isolated = isPawnIsolated(board, square, color);
   board[rank][file].pawnStructure.doubled = isPawnDoubled(board, square, color);
@@ -63,9 +58,37 @@ export function getPawnMobility(board: EnrichedBoard, square: Square, color: Col
   board[rank][file].pawnStructure.backward = isPawnBackward(board, square, color);
   board[rank][file].pawnStructure.blocked = isPawnBlocked(board, square, color);
   board[rank][file].pawnStructure.hanging = isHangingPawns(board, square, color);
-  console.log('PAWN ', square, board[rank][file].pawnStructure.isolated)
-  console.log(mobility)
+
   return mobility;
+}
+
+export function evaluatePawn(board: EnrichedBoard, square: Square, color: Color, phase: PhaseGame): PawnEvaluation {
+  const { rank, file } = squareToIndices(square);
+  const pawnSquare = board[rank][file];
+
+  const weights = getWeightsByPhase(
+    PAWN_OPENING_WEIGHTS,
+    PAWN_MIDDLEGAME_WEIGHTS,
+    PAWN_ENDGAME_WEIGHTS,
+    phase.value
+  );
+
+  const metrics: PawnMetrics = {
+    mobility: mobilityScore(pawnSquare, 3),
+    position: positionScore('n', rank, file, color, phase.name),
+    support: supportScore(pawnSquare),
+    safety: safetyScore(pawnSquare),
+    tactics: 1, // NEEoD GENERIQUE
+    structure: 1,
+    advancement: 1
+  }
+
+  const { scores, totalScore, grade } = pieceScore(metrics, weights, PAWN_CRITERIA_KEYS);
+  return {
+    ...scores,
+    totalScore,
+    grade,
+  };
 }
 
 function isPawnIsolated(board: EnrichedBoard, square: Square, color: Color): boolean {

@@ -1,76 +1,67 @@
 import type { Color, Square } from 'chess.js'
-import type { EnrichedBoard, Mobility } from '../types.ts'
-import { indicesToSquare, isValidSquare, squareToIndices } from '../utils.ts'
+import { calculateMobility, PIECE_MOVEMENTS } from '../mobility.ts'
+import { positionScore } from '../psqt.ts'
+import type { EnrichedBoard, Mobility, PhaseGame, QueenEvaluation, QueenMetrics, QueenWeights } from '../types.ts'
+import { squareToIndices } from '../utils.ts'
+import { getWeightsByPhase, mobilityScore, pieceScore, safetyScore, supportScore } from './utils.ts'
+
+const QUEEN_CRITERIA_KEYS: readonly (keyof QueenMetrics)[] = ['mobility', 'position', 'centralization', 'tactics', 'support', 'safety']
+
+const QUEEN_OPENING_WEIGHTS: QueenWeights = {
+  mobility: 0.5,          // FAIBLE : développement prématuré dangereux
+  position: 0.8,          // Modéré : éviter le centre trop tôt
+  centralization: 0.6,    // Faible : centralisation prématurée = cible
+  tactics: 0.7,           // Modéré : peu d'opportunités early
+  support: 1.0,           // Standard : peut aider le développement
+  safety: 2.0             // MAXIMUM : dame très vulnérable early game
+}
+
+const QUEEN_MIDDLEGAME_WEIGHTS: QueenWeights = {
+  mobility: 1.6,          // IMPORTANT : flexibilité tactique maximale
+  position: 1.1,          // Bon : positionnement stratégique
+  centralization: 1.4,    // Important : domination du centre
+  tactics: 1.8,           // MAXIMUM : reine des tactiques !
+  support: 1.2,           // Important : coordonne les attaques
+  safety: 1.0             // Standard : équilibre risque/récompense
+}
+
+const QUEEN_ENDGAME_WEIGHTS: QueenWeights = {
+  mobility: 1.7,          // TRÈS IMPORTANT : polyvalence en finale
+  position: 0.7,          // Modéré : activité > position
+  centralization: 1.2,    // Bon : contrôle de l'espace
+  tactics: 1.3,           // Important : menaces de mat
+  support: 0.6,           // Faible : moins de pièces à coordonner
+  safety: 0.8             // Modéré : moins de menaces directes
+}
 
 export function getQueenMobility(board: EnrichedBoard, square: Square, color: Color): Mobility {
-  const mobility: Mobility = {
-    moves: [],
-    captures: [],
-    checks: [],
-    totalMobility: 0,
+  return calculateMobility(board, square, color, PIECE_MOVEMENTS.queen);
+}
+
+export function evaluateQueen (board: EnrichedBoard, square: Square, color: Color, phase: PhaseGame): QueenEvaluation {
+  const { rank, file } = squareToIndices(square)
+  const queenSquare = board[rank][file]
+
+  const weights = getWeightsByPhase(
+    QUEEN_OPENING_WEIGHTS,
+    QUEEN_MIDDLEGAME_WEIGHTS,
+    QUEEN_ENDGAME_WEIGHTS,
+    phase.value
+  )
+
+  const metrics: QueenMetrics = {
+    mobility: mobilityScore(queenSquare, 27),
+    position: positionScore('q', rank, file, color, phase.name),
+    support: supportScore(queenSquare),
+    safety: safetyScore(queenSquare),
+    tactics: 1, // A IMPLEMENTER
+    centralization: 1 // A IMPLEMENTER
   }
 
-  const { rank, file } = squareToIndices(square);
-
-  // 🎯 Directions de la dame : horizontales, verticales ET diagonales
-  const queenDirections = [
-    // Directions de la tour (horizontales/verticales)
-    [-1, 0], // Haut
-    [1, 0],  // Bas
-    [0, -1], // Gauche
-    [0, 1],  // Droite
-    // Directions du fou (diagonales)
-    [-1, -1], // Haut-gauche
-    [-1, 1],  // Haut-droite
-    [1, -1],  // Bas-gauche
-    [1, 1]    // Bas-droite
-  ];
-
-  // 🎯 Pour chaque direction
-  for (const [rankDir, fileDir] of queenDirections) {
-    let currentRank = rank + rankDir;
-    let currentFile = file + fileDir;
-
-    // 🎯 Continue jusqu'à atteindre une pièce ou le bord de l'échiquier
-    while (isValidSquare(currentRank, currentFile)) {
-      const targetSquare = board[currentRank][currentFile];
-      const targetSquareNotation = indicesToSquare(currentRank, currentFile);
-
-      // 🎯 Case vide : mouvement possible
-      if (!targetSquare.piece) {
-        mobility.moves.push(targetSquareNotation);
-      }
-      // 🎯 Pièce ennemie : capture possible
-      else if (targetSquare.piece.color !== color) {
-        if (targetSquare.piece.type === 'k') {
-          mobility.checks.push(targetSquareNotation);
-        } else {
-          mobility.captures.push(targetSquareNotation);
-        }
-        break; // Arrêter dans cette direction après capture
-      }
-      // 🎯 Pièce alliée : bloquer le chemin
-      else {
-        break; // Arrêter dans cette direction
-      }
-
-      // 🎯 Continuer dans la même direction
-      currentRank += rankDir;
-      currentFile += fileDir;
-    }
+  const { scores, totalScore, grade } = pieceScore(metrics, weights, QUEEN_CRITERIA_KEYS)
+  return {
+    ...scores,
+    totalScore,
+    grade
   }
-
-  // 🎯 Mettre à jour la mobilité totale
-  mobility.totalMobility = mobility.moves.length + mobility.captures.length + mobility.checks.length;
-
-  // 🎯 Sauvegarder dans le board
-  board[rank][file].mobility.moves = mobility.moves;
-  board[rank][file].mobility.captures = mobility.captures;
-  board[rank][file].mobility.checks = mobility.checks;
-  board[rank][file].mobility.totalMobility = mobility.totalMobility;
-
-  console.log('QUEEN ', square, 'mobility:', mobility.totalMobility);
-  console.log(mobility);
-
-  return mobility;
 }

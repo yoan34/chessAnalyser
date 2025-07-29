@@ -34,6 +34,7 @@ export default function App () {
   const chessGame = chessGameRef.current
 
   const [chessPosition, setChessPosition] = useState(chessGame.fen())
+  const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>('white')
   const [lastMove, setLastMove] = useState<LastMove | null>(null)
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -151,6 +152,10 @@ export default function App () {
     }))
   }
 
+  const toggleBoardOrientation = () => {
+    setBoardOrientation(prev => prev === 'white' ? 'black' : 'white')
+  }
+
   const analyzeCurrentPosition = async (fen: string) => {
     setIsAnalyzing(true)
     try {
@@ -212,37 +217,65 @@ export default function App () {
     squareStyles: squareStyles ? getOnlyCSSSquare(squareStyles) : {},
     allowDragging: true,
     id: 'basic-chessboard',
-    arrows
+    arrows,
+    boardOrientation
   }
 
+  // Déterminer quelle équipe afficher à gauche et à droite selon l'orientation
+  const leftTeam = boardOrientation === 'white' ? analysisData?.whiteTeam : analysisData?.blackTeam
+  const rightTeam = boardOrientation === 'white' ? analysisData?.blackTeam : analysisData?.whiteTeam
+  const leftTeamColor = boardOrientation === 'white' ? 'white' : 'black'
+  const rightTeamColor = boardOrientation === 'white' ? 'black' : 'white'
+
   return (
-    <div className="flex flex-row">
-      <div className="p-5">
-        <div className="w-[600px] mx-auto">
+    <div className="flex flex-row min-h-screen">
+      {/* Team de gauche */}
+      <div className="p-3">
+        {leftTeam && <TeamDisplay team={leftTeam} color={leftTeamColor}/>}
+      </div>
+
+      {/* Section centrale : Chessboard + SquareCard */}
+      <div className="flex flex-col p-1 items-center">
+        {/* Bouton pour changer l'orientation */}
+        <div className="mb-4">
+          <button
+            onClick={toggleBoardOrientation}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Flip Board ({boardOrientation === 'white' ? 'Black' : 'White'} to bottom)
+          </button>
+        </div>
+
+        {/* Chessboard */}
+        <div className="w-[600px] mb-4">
           <Chessboard options={chessboardOptions}/>
+        </div>
+
+        {/* SquareCard */}
+        <div className="w-[600px]">
+          {indexesSquare ? (
+            <div className="w-full h-40 bg-blue-50 p-2.5 rounded-lg border-2 border-blue-500 text-blue-800 font-bold text-center">
+              <SquareCard
+                key={indexesSquare?.file + '-' + indexesSquare?.rank}
+                square={analysisData?.board[indexesSquare.rank][indexesSquare.file]}
+                arrowPreferences={arrowPreferences}
+                onToggleAttackers={toggleAttackers}
+                onToggleDefenders={toggleDefenders}
+                squarePreferences={squarePreferences}
+                onToggleMobility={toggleMobility}
+              />
+            </div>
+          ) : (
+            <div className="w-full h-40 bg-blue-50 p-2.5 rounded-lg border-2 border-blue-500 text-blue-800 font-bold text-center flex items-center justify-center">
+              Cliquez sur une case
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="p-5 flex gap-1">
-        {indexesSquare ? (
-          <div className="w-fit h-40 bg-blue-50 p-2.5 mb-5 rounded-lg border-2 border-blue-500 text-blue-800 font-bold text-center">
-            <SquareCard
-              key={indexesSquare?.file + '-' + indexesSquare?.rank}
-              square={analysisData?.board[indexesSquare.rank][indexesSquare.file]}
-              arrowPreferences={arrowPreferences}
-              onToggleAttackers={toggleAttackers}
-              onToggleDefenders={toggleDefenders}
-              squarePreferences={squarePreferences}
-              onToggleMobility={toggleMobility}
-            />
-          </div>
-        ) : (
-          <div className="w-fit h-40 bg-blue-50 p-2.5 mb-5 rounded-lg border-2 border-blue-500 text-blue-800 font-bold text-center">
-            Cliquez sur une case
-          </div>
-        )}
-        {analysisData?.whiteTeam && <TeamDisplay team={analysisData?.whiteTeam} color={'white'}/>}
-        {analysisData?.blackTeam && <TeamDisplay team={analysisData?.blackTeam} color={'black'}/>}
+      {/* Team de droite */}
+      <div className="p-3">
+        {rightTeam && <TeamDisplay team={rightTeam} color={rightTeamColor}/>}
       </div>
     </div>
   )

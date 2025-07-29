@@ -41,21 +41,31 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
     return 'F';
   };
 
-  // Composant Progress Bar
+  // Déterminer si c'est l'équipe de droite (pour inverser l'ordre)
+  const isRightTeam = color === 'black'; // Supposons que les noirs sont à droite par défaut
+
+  // Composant Progress Bar standard
   const ProgressBar = ({ value, maxValue = 2.5, isTotal = false, grade }: {
     value: number | undefined;
     maxValue?: number;
     isTotal?: boolean;
     grade?: string;
   }) => {
-    // 🔧 Protection contre les valeurs undefined
     const safeValue = value || 0;
     const percentage = Math.min(100, (safeValue / maxValue) * 100);
     const displayGrade = grade || getCriteriaGrade(safeValue, maxValue);
     const colorClass = getGradeColor(displayGrade, isTotal);
 
+    // Taille plus grande pour le total avec style inline pour une largeur personnalisée
+    const width = isTotal ? '' : 'w-12';
+    const height = isTotal ? 'h-5' : 'h-4';
+    const customStyle = isTotal ? { width: '90px' } : {};
+
     return (
-      <div className="w-12 h-4 relative bg-gray-200 rounded border overflow-hidden">
+      <div
+        className={`${width} ${height} relative bg-gray-200 rounded border overflow-hidden`}
+        style={customStyle}
+      >
         <div
           className={`h-full ${colorClass} transition-all duration-300`}
           style={{ width: `${percentage}%` }}
@@ -67,99 +77,114 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
     );
   };
 
+  // Fonction pour calculer la moyenne des pions
+  const getPawnAverage = (): { averageScore: number; grade: string } => {
+    if (team.pawns.length === 0) return { averageScore: 0, grade: 'F' };
+
+    const totalScore = team.pawns.reduce((sum, pawn) => {
+      const evaluation = pawn.evaluation as PawnEvaluation;
+      return sum + (evaluation?.totalScore || 0);
+    }, 0);
+
+    const averageScore = totalScore / team.pawns.length;
+    const grade = getCriteriaGrade(averageScore, 10);
+
+    return { averageScore, grade };
+  };
+
   const PieceRow = ({ piece, type }: { piece: EnrichedSquare; type: 'n' | 'b' | 'r' | 'q' | 'k' | 'p' }) => {
     const evaluation = piece.evaluation;
     if (!evaluation || piece.piece?.type !== type) return null;
 
+    const createRowContent = (children: React.ReactNode[]) => (
+      <div className={`flex items-center mt-1 gap-2 ${isRightTeam ? 'flex-row-reverse justify-end' : 'justify-end'}`}>
+        {children}
+      </div>
+    );
+
     switch (type) {
       case 'k': {
         const kingEval = evaluation as KingEvaluation;
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-8 text-xs font-medium">{piece.square}</div>
-            <ProgressBar value={kingEval.mobility} />
-            <ProgressBar value={kingEval.position} />
-            <ProgressBar value={kingEval.activity} />
-            <ProgressBar value={kingEval.castling} />
-            <ProgressBar value={kingEval.support} />
-            <ProgressBar value={kingEval.safety} />
-            <ProgressBar value={kingEval.totalScore} maxValue={10} isTotal={true} grade={kingEval.grade} />
-          </div>
-        );
+        const content = [
+          <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
+          <ProgressBar key="mobility" value={kingEval.mobility} />,
+          <ProgressBar key="position" value={kingEval.position} />,
+          <ProgressBar key="activity" value={kingEval.activity} />,
+          <ProgressBar key="castling" value={kingEval.castling} />,
+          <ProgressBar key="support" value={kingEval.support} />,
+          <ProgressBar key="safety" value={kingEval.safety} />,
+          <ProgressBar key="total" value={kingEval.totalScore} maxValue={10} isTotal={true} grade={kingEval.grade} />
+        ];
+        return createRowContent(content);
       }
       case 'q': {
         const queenEval = evaluation as QueenEvaluation;
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-8 text-xs font-medium">{piece.square}</div>
-            <ProgressBar value={queenEval.mobility} />
-            <ProgressBar value={queenEval.position} />
-            <ProgressBar value={queenEval.centralization} />
-            <ProgressBar value={queenEval.tactics} />
-            <ProgressBar value={queenEval.support} />
-            <ProgressBar value={queenEval.safety} />
-            <ProgressBar value={queenEval.totalScore} maxValue={10} isTotal={true} grade={queenEval.grade} />
-          </div>
-        );
+        const content = [
+          <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
+          <ProgressBar key="mobility" value={queenEval.mobility} />,
+          <ProgressBar key="position" value={queenEval.position} />,
+          <ProgressBar key="centralization" value={queenEval.centralization} />,
+          <ProgressBar key="tactics" value={queenEval.tactics} />,
+          <ProgressBar key="support" value={queenEval.support} />,
+          <ProgressBar key="safety" value={queenEval.safety} />,
+          <ProgressBar key="total" value={queenEval.totalScore} maxValue={10} isTotal={true} grade={queenEval.grade} />
+        ];
+        return createRowContent(content);
       }
       case 'r': {
         const rookEval = evaluation as RookEvaluation;
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-8 text-xs font-medium">{piece.square}</div>
-            <ProgressBar value={rookEval.mobility} />
-            <ProgressBar value={rookEval.position} />
-            <ProgressBar value={rookEval.openFiles} />
-            <ProgressBar value={rookEval.tactics} />
-            <ProgressBar value={rookEval.support} />
-            <ProgressBar value={rookEval.safety} />
-            <ProgressBar value={rookEval.totalScore} maxValue={10} isTotal={true} grade={rookEval.grade} />
-          </div>
-        );
+        const content = [
+          <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
+          <ProgressBar key="mobility" value={rookEval.mobility} />,
+          <ProgressBar key="position" value={rookEval.position} />,
+          <ProgressBar key="openFiles" value={rookEval.openFiles} />,
+          <ProgressBar key="tactics" value={rookEval.tactics} />,
+          <ProgressBar key="support" value={rookEval.support} />,
+          <ProgressBar key="safety" value={rookEval.safety} />,
+          <ProgressBar key="total" value={rookEval.totalScore} maxValue={10} isTotal={true} grade={rookEval.grade} />
+        ];
+        return createRowContent(content);
       }
       case 'b': {
         const bishopEval = evaluation as BishopEvaluation;
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-8 text-xs font-medium">{piece.square}</div>
-            <ProgressBar value={bishopEval.mobility} />
-            <ProgressBar value={bishopEval.position} />
-            <ProgressBar value={bishopEval.diagonals} />
-            <ProgressBar value={bishopEval.tactics} />
-            <ProgressBar value={bishopEval.support} />
-            <ProgressBar value={bishopEval.safety} />
-            <ProgressBar value={bishopEval.totalScore} maxValue={10} isTotal={true} grade={bishopEval.grade} />
-          </div>
-        );
+        const content = [
+          <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
+          <ProgressBar key="mobility" value={bishopEval.mobility} />,
+          <ProgressBar key="position" value={bishopEval.position} />,
+          <ProgressBar key="diagonals" value={bishopEval.diagonals} />,
+          <ProgressBar key="tactics" value={bishopEval.tactics} />,
+          <ProgressBar key="support" value={bishopEval.support} />,
+          <ProgressBar key="safety" value={bishopEval.safety} />,
+          <ProgressBar key="total" value={bishopEval.totalScore} maxValue={10} isTotal={true} grade={bishopEval.grade} />
+        ];
+        return createRowContent(content);
       }
       case 'n': {
         const knightEval = evaluation as KnightEvaluation;
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-8 text-xs font-medium">{piece.square}</div>
-            <ProgressBar value={knightEval.mobility} />
-            <ProgressBar value={knightEval.position} />
-            <ProgressBar value={knightEval.tactics} />
-            <ProgressBar value={knightEval.support} />
-            <ProgressBar value={knightEval.safety} />
-            <ProgressBar value={knightEval.totalScore} maxValue={10} isTotal={true} grade={knightEval.grade} />
-          </div>
-        );
+        const content = [
+          <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
+          <ProgressBar key="mobility" value={knightEval.mobility} />,
+          <ProgressBar key="position" value={knightEval.position} />,
+          <ProgressBar key="tactics" value={knightEval.tactics} />,
+          <ProgressBar key="support" value={knightEval.support} />,
+          <ProgressBar key="safety" value={knightEval.safety} />,
+          <ProgressBar key="total" value={knightEval.totalScore} maxValue={10} isTotal={true} grade={knightEval.grade} />
+        ];
+        return createRowContent(content);
       }
       case 'p': {
         const pawnEval = evaluation as PawnEvaluation;
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-8 text-xs font-medium">{piece.square}</div>
-            <ProgressBar value={pawnEval.mobility} />
-            <ProgressBar value={pawnEval.position} />
-            <ProgressBar value={pawnEval.structure} />
-            <ProgressBar value={pawnEval.advancement} />
-            <ProgressBar value={pawnEval.support} />
-            <ProgressBar value={pawnEval.safety} />
-            <ProgressBar value={pawnEval.totalScore} maxValue={10} isTotal={true} grade={pawnEval.grade} />
-          </div>
-        );
+        const content = [
+          <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
+          <ProgressBar key="mobility" value={pawnEval.mobility} />,
+          <ProgressBar key="position" value={pawnEval.position} />,
+          <ProgressBar key="structure" value={pawnEval.structure} />,
+          <ProgressBar key="advancement" value={pawnEval.advancement} />,
+          <ProgressBar key="support" value={pawnEval.support} />,
+          <ProgressBar key="safety" value={pawnEval.safety} />,
+          <ProgressBar key="total" value={pawnEval.totalScore} maxValue={10} isTotal={true} grade={pawnEval.grade} />
+        ];
+        return createRowContent(content);
       }
       default:
         return null;
@@ -176,9 +201,14 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
       <div className="font-semibold mb-1">{title}</div>
       {pieces.length > 0 ? (
         <>
-          <div className="flex items-center gap-2 text-xs font-medium text-gray-500 mb-1">
+          {/* Headers avec inversion pour l'équipe de droite */}
+          <div className={`flex items-center gap-2 justify-end text-xs font-medium text-gray-500 mb-1 ${isRightTeam ? 'flex-row-reverse' : ''}`}>
             {headers.map((header, idx) => (
-              <div key={idx} className={idx === 0 ? "w-8 text-center" : "w-12 text-center"}>
+              <div key={idx} className={
+                idx === 0 ? "w-8 text-center" :
+                  header === 'Tot' ? "text-center" :
+                    "w-12 text-center"
+              } style={header === 'Tot' ? { width: '90px' } : {}}>
                 {header}
               </div>
             ))}
@@ -186,6 +216,25 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
           {pieces.map((piece, idx) => (
             <PieceRow key={idx} piece={piece} type={type} />
           ))}
+          {/* Ligne moyenne pour les pions */}
+          {type === 'p' && pieces.length > 1 && (() => {
+            const { averageScore, grade } = getPawnAverage();
+            const content = [
+              <div key="avg-label" className="w-8 text-xs font-medium text-gray-500">Avg</div>,
+              <div key="spacer1" className="w-12"></div>,
+              <div key="spacer2" className="w-12"></div>,
+              <div key="spacer3" className="w-12"></div>,
+              <div key="spacer4" className="w-12"></div>,
+              <div key="spacer5" className="w-12"></div>,
+              <div key="spacer6" className="w-12"></div>,
+              <ProgressBar key="avg-total" value={averageScore} maxValue={10} isTotal={true} grade={grade} />
+            ];
+            return (
+              <div className={`flex items-center gap-2 border-t mt-1 pt-1 ${isRightTeam ? 'flex-row-reverse' : ''}`}>
+                {content}
+              </div>
+            );
+          })()}
         </>
       ) : (
         <div className="text-gray-500 italic">None</div>
@@ -222,11 +271,11 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
   };
 
   return (
-    <div className={`p-3 rounded-lg border-2 w-[600px] ${
+    <div className={`p-3 rounded-lg border-2 ${
       color === 'white'
         ? 'bg-gray-50 border-gray-300 text-black'
         : 'bg-gray-800 border-gray-600 text-white'
-    }`}>
+    }`} style={{ width: 'fit-content' }}>
       {/* Header */}
       <div className="text-center mb-2">
         <div className="text-sm font-bold uppercase">
@@ -234,7 +283,7 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-0">
         {/* Mobility & Material - Une seule ligne chacun */}
         <div className={blockClass}>
           <div className="font-semibold mb-1">Mobility & Material</div>
@@ -250,7 +299,7 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
             title="♔ King"
             pieces={[team.king]}
             type="k"
-            headers={['Sq', 'Mob', 'Pos', 'Act', 'Cast', 'Sup', 'Saf', 'Tot']}
+            headers={['case', 'Mobility', 'Position', 'Activity', 'Castling', 'Support', 'Safety', 'Total']}
           />
         )}
 

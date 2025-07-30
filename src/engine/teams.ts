@@ -1,4 +1,4 @@
-import type { PieceSymbol } from 'chess.js'
+import type { Chess, PieceSymbol } from 'chess.js'
 import { evaluateKing } from './pieces/king.ts'
 import { evaluatePawn } from './pieces/pawn.ts'
 import { evaluateQueen } from './pieces/queen.ts'
@@ -7,7 +7,7 @@ import type { EnrichedBoard, PhaseGame, PhaseName, TeamStructure } from './types
 import { evaluateBishop } from './pieces/bishop.ts'
 import { evaluateKnight } from './pieces/knight.ts'
 
-export function buildTeams(board: EnrichedBoard): { whiteTeam: TeamStructure, blackTeam: TeamStructure } {
+export function buildTeams(board: EnrichedBoard, chess: Chess): { whiteTeam: TeamStructure, blackTeam: TeamStructure } {
   const whiteTeam: TeamStructure = {
     phase: {
       name: 'Opening',
@@ -94,7 +94,7 @@ export function buildTeams(board: EnrichedBoard): { whiteTeam: TeamStructure, bl
         // Ajouter la pièce à la bonne catégorie
         switch (pieceType) {
           case 'k':
-            square.evaluation = evaluateKing(board, square.square, square.piece.color, phase)
+            square.evaluation = evaluateKing(board, square.square, square.piece.color, phase, chess)
             team.king = square
             break
           case 'q':

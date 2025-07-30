@@ -4,6 +4,7 @@
 
 // ♟️ PION - OUVERTURE/MILIEU DE JEU
 import type { Color, PieceSymbol } from 'chess.js'
+import { STANDARD_CRITERION_MAX } from './pieces/normalization.ts'
 import type { PhaseName } from './types.ts'
 
 export const PAWN_PSQT_OPENING = [
@@ -234,5 +235,5 @@ export function positionScore(
   const psqtValue = table[adjustedRank][file];
   const normalizedValue = (psqtValue - range.min) / (range.max - range.min);
 
-  return Math.max(0, Math.min(2.5, normalizedValue * 2.5));
+  return Math.max(0, Math.min(STANDARD_CRITERION_MAX.position, normalizedValue * STANDARD_CRITERION_MAX.position));
 }

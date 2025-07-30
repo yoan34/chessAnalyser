@@ -1,3 +1,4 @@
+import { STANDARD_CRITERION_MAX } from '../engine/pieces/normalization.ts'
 import type {
   BishopEvaluation,
   EnrichedSquare,
@@ -45,18 +46,26 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
   const isRightTeam = color === 'black'; // Supposons que les noirs sont à droite par défaut
 
   // Composant Progress Bar standard
-  const ProgressBar = ({ value, maxValue = 2.5, isTotal = false, grade }: {
+  const ProgressBar = ({ value, criteriaName, isTotal = false, grade }: {
     value: number | undefined;
-    maxValue?: number;
+    criteriaName?: keyof typeof STANDARD_CRITERION_MAX;
     isTotal?: boolean;
     grade?: string;
   }) => {
     const safeValue = value || 0;
+
+    // Utiliser la valeur max appropriée selon le critère
+    let maxValue = 2.5; // valeur par défaut
+    if (isTotal) {
+      maxValue = 10;
+    } else if (criteriaName && STANDARD_CRITERION_MAX[criteriaName]) {
+      maxValue = STANDARD_CRITERION_MAX[criteriaName];
+    }
+
     const percentage = Math.min(100, (safeValue / maxValue) * 100);
     const displayGrade = grade || getCriteriaGrade(safeValue, maxValue);
     const colorClass = getGradeColor(displayGrade, isTotal);
 
-    // Taille plus grande pour le total avec style inline pour une largeur personnalisée
     const width = isTotal ? '' : 'w-12';
     const height = isTotal ? 'h-5' : 'h-4';
     const customStyle = isTotal ? { width: '90px' } : {};
@@ -76,6 +85,7 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
       </div>
     );
   };
+
 
   // Fonction pour calculer la moyenne des pions
   const getPawnAverage = (): { averageScore: number; grade: string } => {
@@ -107,13 +117,13 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
         const kingEval = evaluation as KingEvaluation;
         const content = [
           <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
-          <ProgressBar key="mobility" value={kingEval.mobility} />,
-          <ProgressBar key="position" value={kingEval.position} />,
-          <ProgressBar key="activity" value={kingEval.activity} />,
-          <ProgressBar key="castling" value={kingEval.castling} />,
-          <ProgressBar key="support" value={kingEval.support} />,
-          <ProgressBar key="safety" value={kingEval.safety} />,
-          <ProgressBar key="total" value={kingEval.totalScore} maxValue={10} isTotal={true} grade={kingEval.grade} />
+          <ProgressBar key="mobility" value={kingEval.mobility} criteriaName="mobility" />,
+          <ProgressBar key="position" value={kingEval.position} criteriaName="position" />,
+          <ProgressBar key="activity" value={kingEval.activity} criteriaName="activity" />,
+          <ProgressBar key="castling" value={kingEval.castling} criteriaName="castling" />,
+          <ProgressBar key="support" value={kingEval.support} criteriaName="support" />,
+          <ProgressBar key="safety" value={kingEval.safety} criteriaName="safety" />,
+          <ProgressBar key="total" value={kingEval.totalScore} isTotal={true} grade={kingEval.grade} />
         ];
         return createRowContent(content);
       }
@@ -121,13 +131,13 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
         const queenEval = evaluation as QueenEvaluation;
         const content = [
           <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
-          <ProgressBar key="mobility" value={queenEval.mobility} />,
-          <ProgressBar key="position" value={queenEval.position} />,
-          <ProgressBar key="centralization" value={queenEval.centralization} />,
-          <ProgressBar key="tactics" value={queenEval.tactics} />,
-          <ProgressBar key="support" value={queenEval.support} />,
-          <ProgressBar key="safety" value={queenEval.safety} />,
-          <ProgressBar key="total" value={queenEval.totalScore} maxValue={10} isTotal={true} grade={queenEval.grade} />
+          <ProgressBar key="mobility" value={queenEval.mobility} criteriaName="mobility"/>,
+          <ProgressBar key="position" value={queenEval.position} criteriaName="position"/>,
+          <ProgressBar key="centralization" value={queenEval.centralization} criteriaName="centralization"/>,
+          <ProgressBar key="tactics" value={queenEval.tactics} criteriaName="tactics"/>,
+          <ProgressBar key="support" value={queenEval.support} criteriaName="support"/>,
+          <ProgressBar key="safety" value={queenEval.safety} criteriaName="safety"/>,
+          <ProgressBar key="total" value={queenEval.totalScore} isTotal={true} grade={queenEval.grade} />
         ];
         return createRowContent(content);
       }
@@ -135,13 +145,13 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
         const rookEval = evaluation as RookEvaluation;
         const content = [
           <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
-          <ProgressBar key="mobility" value={rookEval.mobility} />,
-          <ProgressBar key="position" value={rookEval.position} />,
-          <ProgressBar key="openFiles" value={rookEval.openFiles} />,
-          <ProgressBar key="tactics" value={rookEval.tactics} />,
-          <ProgressBar key="support" value={rookEval.support} />,
-          <ProgressBar key="safety" value={rookEval.safety} />,
-          <ProgressBar key="total" value={rookEval.totalScore} maxValue={10} isTotal={true} grade={rookEval.grade} />
+          <ProgressBar key="mobility" value={rookEval.mobility} criteriaName="mobility" />,
+          <ProgressBar key="position" value={rookEval.position} criteriaName="position" />,
+          <ProgressBar key="openFiles" value={rookEval.openFiles} criteriaName="openFiles" />,
+          <ProgressBar key="tactics" value={rookEval.tactics} criteriaName="tactics" />,
+          <ProgressBar key="support" value={rookEval.support} criteriaName="support" />,
+          <ProgressBar key="safety" value={rookEval.safety} criteriaName="safety" />,
+          <ProgressBar key="total" value={rookEval.totalScore} isTotal={true} grade={rookEval.grade} />
         ];
         return createRowContent(content);
       }
@@ -149,13 +159,13 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
         const bishopEval = evaluation as BishopEvaluation;
         const content = [
           <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
-          <ProgressBar key="mobility" value={bishopEval.mobility} />,
-          <ProgressBar key="position" value={bishopEval.position} />,
-          <ProgressBar key="diagonals" value={bishopEval.diagonals} />,
-          <ProgressBar key="tactics" value={bishopEval.tactics} />,
-          <ProgressBar key="support" value={bishopEval.support} />,
-          <ProgressBar key="safety" value={bishopEval.safety} />,
-          <ProgressBar key="total" value={bishopEval.totalScore} maxValue={10} isTotal={true} grade={bishopEval.grade} />
+          <ProgressBar key="mobility" value={bishopEval.mobility} criteriaName="mobility" />,
+          <ProgressBar key="position" value={bishopEval.position} criteriaName="position" />,
+          <ProgressBar key="diagonals" value={bishopEval.diagonals} criteriaName="diagonals" />,
+          <ProgressBar key="tactics" value={bishopEval.tactics} criteriaName="tactics" />,
+          <ProgressBar key="support" value={bishopEval.support} criteriaName="support" />,
+          <ProgressBar key="safety" value={bishopEval.safety} criteriaName="safety" />,
+          <ProgressBar key="total" value={bishopEval.totalScore} isTotal={true} grade={bishopEval.grade} />
         ];
         return createRowContent(content);
       }
@@ -163,12 +173,12 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
         const knightEval = evaluation as KnightEvaluation;
         const content = [
           <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
-          <ProgressBar key="mobility" value={knightEval.mobility} />,
-          <ProgressBar key="position" value={knightEval.position} />,
-          <ProgressBar key="tactics" value={knightEval.tactics} />,
-          <ProgressBar key="support" value={knightEval.support} />,
-          <ProgressBar key="safety" value={knightEval.safety} />,
-          <ProgressBar key="total" value={knightEval.totalScore} maxValue={10} isTotal={true} grade={knightEval.grade} />
+          <ProgressBar key="mobility" value={knightEval.mobility} criteriaName="mobility" />,
+          <ProgressBar key="position" value={knightEval.position} criteriaName="position" />,
+          <ProgressBar key="tactics" value={knightEval.tactics} criteriaName="tactics" />,
+          <ProgressBar key="support" value={knightEval.support} criteriaName="support" />,
+          <ProgressBar key="safety" value={knightEval.safety} criteriaName="safety" />,
+          <ProgressBar key="total" value={knightEval.totalScore} isTotal={true} grade={knightEval.grade} />
         ];
         return createRowContent(content);
       }
@@ -176,13 +186,13 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
         const pawnEval = evaluation as PawnEvaluation;
         const content = [
           <div key="square" className="w-8 text-xs font-medium">{piece.square}</div>,
-          <ProgressBar key="mobility" value={pawnEval.mobility} />,
-          <ProgressBar key="position" value={pawnEval.position} />,
-          <ProgressBar key="structure" value={pawnEval.structure} />,
-          <ProgressBar key="advancement" value={pawnEval.advancement} />,
-          <ProgressBar key="support" value={pawnEval.support} />,
-          <ProgressBar key="safety" value={pawnEval.safety} />,
-          <ProgressBar key="total" value={pawnEval.totalScore} maxValue={10} isTotal={true} grade={pawnEval.grade} />
+          <ProgressBar key="mobility" value={pawnEval.mobility} criteriaName="mobility" />,
+          <ProgressBar key="position" value={pawnEval.position} criteriaName="position" />,
+          <ProgressBar key="structure" value={pawnEval.structure} criteriaName="structure" />,
+          <ProgressBar key="advancement" value={pawnEval.advancement} criteriaName="advancement" />,
+          <ProgressBar key="support" value={pawnEval.support} criteriaName="support" />,
+          <ProgressBar key="safety" value={pawnEval.safety} criteriaName="safety" />,
+          <ProgressBar key="total" value={pawnEval.totalScore} isTotal={true} grade={pawnEval.grade} />
         ];
         return createRowContent(content);
       }
@@ -227,7 +237,7 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
               <div key="spacer4" className="w-12"></div>,
               <div key="spacer5" className="w-12"></div>,
               <div key="spacer6" className="w-12"></div>,
-              <ProgressBar key="avg-total" value={averageScore} maxValue={10} isTotal={true} grade={grade} />
+              <ProgressBar key="avg-total" value={averageScore} isTotal={true} grade={grade} />
             ];
             return (
               <div className={`flex items-center gap-2 border-t mt-1 pt-1 ${isRightTeam ? 'flex-row-reverse' : ''}`}>
@@ -299,7 +309,7 @@ export default function TeamDisplay({ team, color }: TeamDisplayProps) {
             title="♔ King"
             pieces={[team.king]}
             type="k"
-            headers={['case', 'Mobility', 'Position', 'Activity', 'Castling', 'Support', 'Safety', 'Total']}
+            headers={['Sq', 'Mob', 'Pos', 'Act', 'Cas', 'Sup', 'Saf', 'Tot']}
           />
         )}
 

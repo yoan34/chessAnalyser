@@ -30,7 +30,7 @@ type SquareStyle = Partial<Record<Square, {
 }>>;
 
 export default function App () {
-  const chessGameRef = useRef(new Chess('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'))
+  const chessGameRef = useRef(new Chess('r3kb1r/pp2n1pp/5p2/2B2b2/8/5N2/PPq2PPP/RN1QR1K1 w kq - 1 14'))
   const chessGame = chessGameRef.current
 
   const [chessPosition, setChessPosition] = useState(chessGame.fen())

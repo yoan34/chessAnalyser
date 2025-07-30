@@ -23,7 +23,7 @@ export async function chessAnalyzer (fen: string): Promise<AnalysisData> {
 
   addMobility(board)
 
-  const { whiteTeam, blackTeam } = buildTeams(board)
+  const { whiteTeam, blackTeam } = buildTeams(board, chess)
 
   const endAnalyze = Date.now()
   console.log(`Analyze in ${endAnalyze - startAnalyze}ms`)
